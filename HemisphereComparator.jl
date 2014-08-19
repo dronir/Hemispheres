@@ -7,9 +7,9 @@ abstract AnalyticalScatteringLaw
 
 immutable Hemisphere <: ScatteringLaw
 	nData::Int64
-	NTheta::Int64
+	nTheta::Int64
 	dTheta::Float64
-	NPhi::Array{Int64}
+	nPhi::Array{Int64}
 	dPhi::Array{Float64}
 	cIdx::Array{Int64}
 	dA::Array{Float64}
@@ -20,8 +20,8 @@ end
 Hemisphere(filename::String) = load_hemisphere(filename)
 
 function ratio(A::Hemisphere, B::Hemisphere) 
-	if A.NTheta==B.NTheta
-		return Hemisphere(A.nData, A.NTheta, A.dTheta, A.NPhi, A.dPhi, A.cIdx, A.dA, A.data./B.data)
+	if A.nTheta==B.nTheta
+		return Hemisphere(A.nData, A.nTheta, A.dTheta, A.nPhi, A.dPhi, A.cIdx, A.dA, A.data./B.data)
 	else
 		error("Hemispheres don't match.")
 	end
@@ -37,20 +37,37 @@ function load_hemisphere(filename::String)
 	foo = ncinfo(filename)
 	nTheta = ncgetatt(filename, "Global", "nThetaI")
 	dTheta = ncgetatt(filename, "Global", "dTheta")
-	NPhi = ncgetatt(filename, "Global", "nPhi")
+	nPhi = ncgetatt(filename, "Global", "nPhi")
 	dPhi = ncgetatt(filename, "Global", "dPhi")
 	cIdx = ncgetatt(filename, "Global", "cIdx")
 	dA = ncgetatt(filename, "Global", "dA")
 	data = ncread(filename, "Hemisphere")
 	data = squeeze(data,3)
-	nData = sum(NPhi)
-	return Hemisphere(nData,nTheta,dTheta,NPhi,dPhi,cIdx,dA,data)
+	nData = sum(nPhi)
+	return Hemisphere(nData,nTheta,dTheta,nPhi,dPhi,cIdx,dA,data)
 end
 
 # This function saves a hemisphere to a (minimal) file that can be
 # read with load_hemisphere().
 function save_hemisphere(H::Hemisphere, filename::String)
-	nothing
+	level = NcDim("level", 1)
+	nData = NcDim("data", H.nData)
+	thetaI = NcDim("thetaI", H.nTheta)
+	data = NcVar("Hemisphere", [thetaI, nData, level], t=Float64)
+	globals = {
+		"nThetaI"=>H.nTheta,
+		"dTheta"=>H.dTheta,
+		"nPhi"=>H.nPhi,
+		"dPhi"=>H.dPhi,
+		"cIdx"=>H.cIdx,
+		"dA"=>H.dA
+	}
+	D = ones(Float64, H.nTheta, sum(H.nPhi), 1)
+	D[:,:,1] = H.data
+	nc = NetCDF.create(filename, [data], mode=NC_CLASSIC_MODEL)
+	NetCDF.putatt(nc, "", globals)
+	NetCDF.putvar(nc, "Hemisphere", D)
+	NetCDF.close(nc)
 end
 
 # This function makes a plot of a given hemisphere.

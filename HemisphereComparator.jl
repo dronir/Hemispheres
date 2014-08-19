@@ -23,6 +23,7 @@ function generate_hemisphere(S::ScatLaw, Ntheta::Integer)
 end
 
 function load_hemisphere(filename::String)
+	foo = ncinfo(filename)
 	nTheta = ncgetatt(filename, "Global", "nThetaI")
 	dTheta = ncgetatt(filename, "Global", "dTheta")
 	NPhi = ncgetatt(filename, "Global", "nPhi")

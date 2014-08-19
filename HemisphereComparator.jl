@@ -2,10 +2,10 @@ module HemisphereComparator
 	
 using NetCDF
 
-immutable ScatLaw
-end
+abstract ScatteringLaw
+abstract AnalyticalScatteringLaw
 
-immutable Hemisphere
+immutable Hemisphere <: ScatteringLaw
 	nData::Int64
 	NTheta::Int64
 	dTheta::Float64
@@ -16,12 +16,23 @@ immutable Hemisphere
 	data::Array{Float64}
 end
 
+# Construct directly from file.
 Hemisphere(filename::String) = load_hemisphere(filename)
 
-function generate_hemisphere(S::ScatLaw, Ntheta::Integer)
+function ratio(A::Hemisphere, B::Hemisphere) 
+	if A.NTheta==B.NTheta
+		return Hemisphere(A.nData, A.NTheta, A.dTheta, A.NPhi, A.dPhi, A.cIdx, A.dA, A.data./B.data)
+	else
+		error("Hemispheres don't match.")
+	end
+end
+
+# This function generates a hemisphere with a given analytical scattering law.
+function generate_hemisphere(S::AnalyticalScatteringLaw, Ntheta::Integer)
 	nothing
 end
 
+# This function loads a Hemisphere from a hemiScat NetCDF file.
 function load_hemisphere(filename::String)
 	foo = ncinfo(filename)
 	nTheta = ncgetatt(filename, "Global", "nThetaI")
@@ -36,7 +47,14 @@ function load_hemisphere(filename::String)
 	return Hemisphere(nData,nTheta,dTheta,NPhi,dPhi,cIdx,dA,data)
 end
 
-function plot_hemisphere(H::Hemisphere)
+# This function saves a hemisphere to a (minimal) file that can be
+# read with load_hemisphere().
+function save_hemisphere(H::Hemisphere, filename::String)
+	nothing
+end
+
+# This function makes a plot of a given hemisphere.
+function plot_hemisphere(H::Hemisphere, thetaI::Real)
 	nothing
 end
 	

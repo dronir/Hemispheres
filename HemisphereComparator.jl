@@ -28,8 +28,26 @@ function ratio(A::Hemisphere, B::Hemisphere)
 end
 
 # This function generates a hemisphere with a given analytical scattering law.
-function generate_hemisphere(S::AnalyticalScatteringLaw, Ntheta::Integer)
-	nothing
+function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer)
+	cIdx = ones(Int64, nTheta)
+	nPhi = ones(Int64, nTheta)
+	dPhi = zeros(Float64, nTheta)
+	dA = zeros(Float64, nTheta)
+
+	dTheta = pi/(2*nTheta)
+	dA0 = pi*(1 - cos(dTheta))
+	dA[1] = dA0
+	dPhi[1] = pi
+	for i = 2:nTheta
+		phi = dA0 / (cos((i-1)*dTheta) - cos(i*dTheta))
+		nPhi[i] = int(pi / phi)
+		dPhi[i] = pi / nPhi[i]
+		dA[i] = dPhi[i] * (cos((i-1)*dTheta) - cos(i*dTheta))
+		cIdx[i] = cIdx[i-1] + nPhi[i]
+	end
+	nBins = sum(nPhi)
+	data = zeros(nTheta, nBins)
+	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
 end
 
 # This function loads a Hemisphere from a hemiScat NetCDF file.

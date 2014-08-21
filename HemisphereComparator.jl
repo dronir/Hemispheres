@@ -21,6 +21,17 @@ end
 # Construct Hemisphere directly from file.
 Hemisphere(filename::String) = load_hemisphere(filename)
 
+
+immutable LommelSeeliger <: AnalyticalScatteringLaw
+end
+
+function value(S::LommelSeeliger, G::Geometry)
+	mu0 = cos(G.theta_i)
+	mu = cos(G.theta_e)
+	return mu0 / (mu+mu0)
+end
+
+
 function ratio(A::Hemisphere, B::Hemisphere) 
 	if A.nTheta==B.nTheta
 		return Hemisphere(A.nData, A.nTheta, A.dTheta, A.nPhi, A.dPhi, A.cIdx, A.dA, A.data./B.data)
@@ -62,7 +73,7 @@ function point_in_cell(H::Hemisphere, idx::Integer)
 end
 
 # This function generates a hemisphere with a given analytical scattering law.
-function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer)
+function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSamples::Integer)
 	cIdx = ones(Int64, nTheta)
 	nPhi = ones(Int64, nTheta)
 	dPhi = zeros(Float64, nTheta)
@@ -77,15 +88,29 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer)
 		nPhi[i] = int(pi / phi)
 		dPhi[i] = pi / nPhi[i]
 		dA[i] = dPhi[i] * (cos((i-1)*dTheta) - cos(i*dTheta))
-		cIdx[i] = cIdx[i-1] + nPhi[i]
+		cIdx[i] = cIdx[i-1] + nPhi[i-1]
 	end
 	nBins = sum(nPhi)
 	data = zeros(nTheta, nBins)
 	
 	# go through each bin and compute scattering law values
+	for i = 1:nTheta
+		for j = 1:nPhi[i]
+			for k = 1:nTheta
+				for n = 1:nSamples
+					theta_e = (i-rand())*dTheta
+					theta_i = (k-rand())*dTheta
+					phi = (j-rand())*dPhi[i]
+					G = Geometry(theta_i, theta_e, phi)
+					data[k, cIdx[i]+j-1] += value(S, G)
+				end
+			end
+		end
+	end
 	
 	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
 end
+generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer) = generate_hemisphere(S, nTheta, 1000)
 
 # This function loads a Hemisphere from a hemiScat NetCDF file.
 function load_hemisphere(filename::String)

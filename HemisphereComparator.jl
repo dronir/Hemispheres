@@ -1,10 +1,12 @@
 module HemisphereComparator
-	
+
+using ScatteringGeometry
 using NetCDF
 
 abstract ScatteringLaw
 abstract AnalyticalScatteringLaw
 
+# Hemisphere type
 immutable Hemisphere <: ScatteringLaw
 	nData::Int64
 	nTheta::Int64
@@ -16,7 +18,7 @@ immutable Hemisphere <: ScatteringLaw
 	data::Array{Float64}
 end
 
-# Construct directly from file.
+# Construct Hemisphere directly from file.
 Hemisphere(filename::String) = load_hemisphere(filename)
 
 function ratio(A::Hemisphere, B::Hemisphere) 
@@ -25,6 +27,38 @@ function ratio(A::Hemisphere, B::Hemisphere)
 	else
 		error("Hemispheres don't match.")
 	end
+end
+
+# Get cell index for given scattering direction.
+function cell_index(H::Hemisphere, G::Geometry)
+	t = int(G.theta_e / H.dTheta) + 1
+	p = int(G.phi / H.dPhi[t])
+	i = H.cIdx[t] + p
+	j = int(G.theta_i / H.dTheta) + 1
+	return (i,j)
+end
+
+# Get random point in given cell.
+function point_in_cell(H::Hemisphere, idx::Integer)
+	t = 0
+	for t = 1:H.nTheta-1
+		if H.cIdx[t+1] > idx
+			break
+		end
+	end
+	p = idx-H.cIdx[t]+1
+	
+    ca = cos((t-1) * H.dTheta)
+    cb = cos(t * H.dTheta)
+
+    theta = acos(ca - rand()*(ca - cb))
+    phi   = (p - rand()) * H.dPhi[t]
+
+	d = zeros(3)
+    d[1] = sin(theta) * cos(phi)
+    d[2] = sin(theta) * sin(phi)
+    d[3] = cos(theta)
+	return d
 end
 
 # This function generates a hemisphere with a given analytical scattering law.
@@ -47,6 +81,9 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer)
 	end
 	nBins = sum(nPhi)
 	data = zeros(nTheta, nBins)
+	
+	# go through each bin and compute scattering law values
+	
 	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
 end
 

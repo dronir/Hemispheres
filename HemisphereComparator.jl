@@ -6,6 +6,8 @@ using NetCDF
 abstract ScatteringLaw
 abstract AnalyticalScatteringLaw
 
+
+
 # Hemisphere type
 immutable Hemisphere <: ScatteringLaw
 	nData::Int64
@@ -22,6 +24,7 @@ end
 Hemisphere(filename::String) = load_hemisphere(filename)
 
 
+
 immutable LommelSeeliger <: AnalyticalScatteringLaw
 end
 
@@ -32,6 +35,8 @@ function value(S::LommelSeeliger, G::Geometry)
 end
 
 
+
+# Compute the ratio between two hemispheres.
 function ratio(A::Hemisphere, B::Hemisphere) 
 	if A.nTheta==B.nTheta
 		return Hemisphere(A.nData, A.nTheta, A.dTheta, A.nPhi, A.dPhi, A.cIdx, A.dA, A.data./B.data)
@@ -39,6 +44,8 @@ function ratio(A::Hemisphere, B::Hemisphere)
 		error("Hemispheres don't match.")
 	end
 end
+
+
 
 # Get cell index for given scattering direction.
 function cell_index(H::Hemisphere, G::Geometry)
@@ -49,6 +56,8 @@ function cell_index(H::Hemisphere, G::Geometry)
 	return (i,j)
 end
 
+
+
 # Get random point in given cell.
 function point_in_cell(H::Hemisphere, idx::Integer)
 	t = 0
@@ -58,7 +67,7 @@ function point_in_cell(H::Hemisphere, idx::Integer)
 		end
 	end
 	p = idx-H.cIdx[t]+1
-	
+
     ca = cos((t-1) * H.dTheta)
     cb = cos(t * H.dTheta)
 
@@ -71,6 +80,8 @@ function point_in_cell(H::Hemisphere, idx::Integer)
     d[3] = cos(theta)
 	return d
 end
+
+
 
 # This function generates a hemisphere with a given analytical scattering law.
 function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSamples::Integer)
@@ -92,7 +103,7 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 	end
 	nBins = sum(nPhi)
 	data = zeros(nTheta, nBins)
-	
+
 	# go through each bin and compute scattering law values
 	for i = 1:nTheta
 		for j = 1:nPhi[i]
@@ -107,10 +118,13 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 			end
 		end
 	end
-	
+
 	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
 end
+
 generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer) = generate_hemisphere(S, nTheta, 1000)
+
+
 
 # This function loads a Hemisphere from a hemiScat NetCDF file.
 function load_hemisphere(filename::String)
@@ -126,6 +140,8 @@ function load_hemisphere(filename::String)
 	nData = sum(nPhi)
 	return Hemisphere(nData,nTheta,dTheta,nPhi,dPhi,cIdx,dA,data)
 end
+
+
 
 # This function saves a hemisphere to a (minimal) file that can be
 # read with load_hemisphere().
@@ -150,9 +166,11 @@ function save_hemisphere(H::Hemisphere, filename::String)
 	NetCDF.close(nc)
 end
 
+
+
 # This function makes a plot of a given hemisphere.
 function plot_hemisphere(H::Hemisphere, thetaI::Real)
 	nothing
 end
-	
+
 end # module

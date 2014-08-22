@@ -34,6 +34,11 @@ function value(S::LommelSeeliger, G::Geometry)
 	return mu0 / (mu+mu0)
 end
 
+function value(H::Hemisphere, G::Geometry)
+	i,j = cell_index(H,G)
+	return H.data[j,i]
+end
+
 
 
 # Compute the ratio between two hemispheres.
@@ -122,7 +127,7 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
 end
 
-generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer) = generate_hemisphere(S, nTheta, 1000)
+generate_hemisphere(S::ScatteringLaw, nTheta::Integer) = generate_hemisphere(S, nTheta, 1000)
 
 
 

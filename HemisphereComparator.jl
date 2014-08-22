@@ -2,6 +2,12 @@ module HemisphereComparator
 
 using ScatteringGeometry
 using NetCDF
+using PyCall
+
+@pyimport matplotlib
+@pyimport matplotlib.patches as patch
+@pyimport matplotlib.collections as collections
+@pyimport matplotlib.pyplot as plot
 
 abstract ScatteringLaw
 abstract AnalyticalScatteringLaw
@@ -175,7 +181,39 @@ end
 
 # This function makes a plot of a given hemisphere.
 function plot_hemisphere(H::Hemisphere, thetaI::Real)
-	nothing
+    patches = Any[]
+	const DEG = 57.295791433
+    N = H.nTheta
+    width = H.dTheta * DEG
+    n = 0
+    for i = 1:N
+        r = i*H.dTheta * DEG
+        for j = 1:H.nPhi[i]
+            a = (j-1)*H.dPhi[i] * DEG - 0.5
+            b = j*H.dPhi[i] * DEG * 1.05
+            P1 = patch.Wedge((0,0), r, a-90, b-90, width=width*1.05)
+            P2 = patch.Wedge((0,0), r, 360-b-90, 360-a-90, width=width*1.05)
+			push!(patches, P1, P2)
+            n += 2
+		end
+	end
+
+	idx = int(thetaI/H.dTheta)+1
+
+    newdata = zeros(2*H.nData)
+    for i = 1:H.nData
+        newdata[2*i-1] = H.data[idx,i]
+        newdata[2*i] = H.data[idx,i]
+	end
+    p = collections.PatchCollection(patches, cmap=matplotlib.cm[:jet], linewidths=zeros(2*N))
+    p[:set_array](newdata[1:n])
+    fig, ax = plot.subplots()
+    ax[:add_collection](p)
+    #fig[:colorbar](p)
+    plot.xlim(-90, 90)
+    plot.ylim(-90, 90)
+    #plot.title("foo")
+	plot.show()
 end
 
 end # module

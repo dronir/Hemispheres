@@ -12,7 +12,10 @@ using PyCall
 abstract ScatteringLaw
 abstract AnalyticalScatteringLaw
 
-
+export Hemisphere
+export value, ratio, cell_index, point_in_cell
+export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
+export LommelSeeliger
 
 # Hemisphere type
 immutable Hemisphere <: ScatteringLaw
@@ -209,7 +212,7 @@ function plot_hemisphere(H::Hemisphere, thetaI::Real)
     p[:set_array](newdata[1:n])
     fig, ax = plot.subplots()
     ax[:add_collection](p)
-    #fig[:colorbar](p)
+    fig[:colorbar](p)
     plot.xlim(-90, 90)
     plot.ylim(-90, 90)
     #plot.title("foo")

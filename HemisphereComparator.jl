@@ -8,6 +8,7 @@ using PyCall
 @pyimport matplotlib.patches as patch
 @pyimport matplotlib.collections as collections
 @pyimport matplotlib.pyplot as plot
+@pyimport matplotlib.cm as colormap
 
 abstract ScatteringLaw
 abstract AnalyticalScatteringLaw
@@ -208,7 +209,7 @@ function plot_hemisphere(H::Hemisphere, thetaI::Real)
         newdata[2*i-1] = H.data[idx,i]
         newdata[2*i] = H.data[idx,i]
 	end
-    p = collections.PatchCollection(patches, cmap=matplotlib.cm[:jet], linewidths=zeros(2*N))
+    p = collections.PatchCollection(patches, cmap=colormap.jet, linewidths=zeros(2*N))
     p[:set_array](newdata[1:n])
     fig, ax = plot.subplots()
     ax[:add_collection](p)

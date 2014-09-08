@@ -11,7 +11,7 @@ using PyCall
 @pyimport matplotlib.cm as colormap
 
 abstract ScatteringLaw
-abstract AnalyticalScatteringLaw
+abstract AnalyticalScatteringLaw <: ScatteringLaw
 
 export Hemisphere
 export value, ratio, cell_index, point_in_cell
@@ -133,7 +133,7 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 			end
 		end
 	end
-
+	data /= nSamples
 	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
 end
 

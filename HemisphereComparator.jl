@@ -64,10 +64,10 @@ end
 
 # Get cell index for given scattering direction.
 function cell_index(H::Hemisphere, G::Geometry)
-	t = int(G.theta_e / H.dTheta) + 1
-	p = int(G.phi / H.dPhi[t])
+	t = int(fld(G.theta_e, H.dTheta)) + 1
+	p = int(fld(G.phi, H.dPhi[t]))
 	i = H.cIdx[t] + p
-	j = int(G.theta_i / H.dTheta) + 1
+	j = int(fld(G.theta_i, H.dTheta)) + 1
 	return (i,j)
 end
 
@@ -219,5 +219,25 @@ function plot_hemisphere(H::Hemisphere, thetaI::Real)
     #plot.title("foo")
 	plot.show()
 end
+
+# Make a plot of the primary plane
+function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
+	X = linspace(-85.0, 85.0, N)
+	Y = zeros(N)
+	for i = 1:N
+		x = X[i]
+		theta_e = abs(x)*pi/180
+		phi = x<=0 ? 0.0 : pi
+		G = Geometry(thetaI, theta_e, phi)
+		Y[i] = value(H,G)
+	end
+	plot.plot(X,Y)
+	plot.xlim(-90,90)
+	plot.axvline(0,color="black")
+	plot.show()
+end
+
+plot_primary_plane(H::Hemisphere, thetaI::Real) = plot_primary_plane(H,thetaI,100)
+
 
 end # module

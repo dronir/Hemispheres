@@ -138,19 +138,23 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 
 	# go through each bin and compute scattering law values
 	for i = 1:nTheta
+		N = int((dA[i] / dA[1])*nSamples)
 		for j = 1:nPhi[i]
 			for k = 1:nTheta
-				for n = 1:nSamples
-					theta_e = (i-rand())*dTheta
+				for n = 1:N
 					theta_i = (k-rand())*dTheta
+					ca = cos((i-1)*dTheta)
+					cb = cos(i*dTheta)
+					theta_e = acos(ca - rand()*(ca-cb))
 					phi = (j-rand())*dPhi[i]
 					G = Geometry(theta_i, theta_e, phi)
-					data[k, cIdx[i]+j-1] += value(S, G)
+					data[k, cIdx[i]+j-1] += value(S, G)/N
 				end
 			end
 		end
+		data[1:end, cIdx[i]:cIdx[i]+nPhi[i]] /= N
 	end
-	data /= nSamples
+#	data /= nSamples
 	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
 end
 

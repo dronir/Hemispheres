@@ -242,7 +242,8 @@ function plot_hemisphere(H::Hemisphere, thetaI::Real)
 end
 
 # Make a plot of the primary plane
-function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
+# (theta_e varies from -85 to +85 with theta_i constant)
+function plot_primary_plane(H::ScatteringLaw, thetaI::Real, N::Integer)
 	X = linspace(-85.0, 85.0, N)
 	Y = zeros(N)
 	for i = 1:N
@@ -259,7 +260,8 @@ function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
 	return X,Y
 end
 
-# Make a plot of the primary plane
+# Make a plot of the emergent plane
+# (theta_i varies from -85 to +85 with theta_e constant)
 function plot_emergent_plane(H::Hemisphere, theta_e::Real, N::Integer)
 	X = linspace(-85.0, 85.0, N)
 	Y = zeros(N)
@@ -277,7 +279,7 @@ function plot_emergent_plane(H::Hemisphere, theta_e::Real, N::Integer)
 	return X,Y
 end
 
-plot_primary_plane(H::Hemisphere, thetaI::Real) = plot_primary_plane(H,thetaI,100)
+plot_primary_plane(H::Hemisphere, thetaI::Real) = plot_primary_plane(H,thetaI,1000)
 
 
 end # module

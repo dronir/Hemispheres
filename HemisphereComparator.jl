@@ -127,8 +127,8 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 	dA[1] = dA0
 	dPhi[1] = pi
 	for i = 2:nTheta
-		phi = dA0 / (cos((i-1)*dTheta) - cos(i*dTheta))
-		nPhi[i] = int(pi / phi)
+		dp = dA0 / (cos((i-1)*dTheta) - cos(i*dTheta))
+		nPhi[i] = int(pi / dp)
 		dPhi[i] = pi / nPhi[i]
 		dA[i] = dPhi[i] * (cos((i-1)*dTheta) - cos(i*dTheta))
 		cIdx[i] = cIdx[i-1] + nPhi[i-1]
@@ -148,11 +148,11 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 					theta_e = acos(ca - rand()*(ca-cb))
 					phi = (j-rand())*dPhi[i]
 					G = Geometry(theta_i, theta_e, phi)
-					data[k, cIdx[i]+j-1] += value(S, G)/N
+					data[k, cIdx[i]+j-1] += value(S, G)
 				end
 			end
 		end
-		data[1:end, cIdx[i]:cIdx[i]+nPhi[i]] /= N
+		data[1:end, cIdx[i]:cIdx[i]+nPhi[i]-1] /= N
 	end
 #	data /= nSamples
 	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
@@ -223,7 +223,7 @@ function plot_hemisphere(H::Hemisphere, thetaI::Real)
 		end
 	end
 
-	idx = int(thetaI/H.dTheta)+1
+	idx = int(fld(thetaI, H.dTheta))+1
 
     newdata = zeros(2*H.nData)
     for i = 1:H.nData
@@ -248,7 +248,7 @@ function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
 	for i = 1:N
 		x = X[i]
 		theta_e = abs(x)*pi/180
-		phi = x<=0 ? 0.0 : pi
+		phi = x<=0 ? eps() : pi-eps()
 		G = Geometry(thetaI, theta_e, phi)
 		Y[i] = value(H,G)
 	end

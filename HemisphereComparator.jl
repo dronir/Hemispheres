@@ -16,7 +16,8 @@ abstract AnalyticalScatteringLaw <: ScatteringLaw
 export Hemisphere
 export value, ratio, cell_index, point_in_cell
 export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
-export LommelSeeliger
+export plot_primary_plane
+export LommelSeeliger, ModifiedLommelSeeliger, BennuNominal
 
 # Hemisphere type
 immutable Hemisphere <: ScatteringLaw
@@ -38,10 +39,26 @@ Hemisphere(filename::String) = load_hemisphere(filename)
 immutable LommelSeeliger <: AnalyticalScatteringLaw
 end
 
+immutable ModifiedLommelSeeliger <: AnalyticalScatteringLaw
+	a::Float64
+	b::Float64
+	c::Float64
+end
+
+BennuNominal() = ModifiedLommelSeeliger(-4.36e-2, 2.69e-4, -9.90e-7)
+
+
 function value(S::LommelSeeliger, G::Geometry)
 	mu0 = cos(G.theta_i)
 	mu = cos(G.theta_e)
-	return mu0 / (mu+mu0)
+	return mu0 / (mu+mu0) / (4*pi)
+end
+
+function value(S::ModifiedLommelSeeliger, G::Geometry)
+	mu0 = cos(G.theta_i)
+	mu = cos(G.theta_e)
+	alpha = phase_angle(G)
+	return mu0 / (mu+mu0) / (4*pi) * exp(S.a*alpha + S.b*alpha^2 + S.c*alpha^3)
 end
 
 function value(H::Hemisphere, G::Geometry)
@@ -194,7 +211,7 @@ function plot_hemisphere(H::Hemisphere, thetaI::Real)
         r = i*H.dTheta * DEG
         for j = 1:H.nPhi[i]
             a = (j-1)*H.dPhi[i] * DEG - 0.5
-            b = j*H.dPhi[i] * DEG * 1.05
+            b = j*H.dPhi[i] * DEG + 0.5
             P1 = patch.Wedge((0,0), r, a-90, b-90, width=width*1.05)
             P2 = patch.Wedge((0,0), r, 360-b-90, 360-a-90, width=width*1.05)
 			push!(patches, P1, P2)
@@ -235,6 +252,25 @@ function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
 	plot.xlim(-90,90)
 	plot.axvline(0,color="black")
 	plot.show()
+	return X,Y
+end
+
+# Make a plot of the primary plane
+function plot_emergent_plane(H::Hemisphere, theta_e::Real, N::Integer)
+	X = linspace(-85.0, 85.0, N)
+	Y = zeros(N)
+	for i = 1:N
+		x = X[i]
+		theta_i = abs(x)*pi/180
+		phi = x<=0 ? 0.0 : pi
+		G = Geometry(theta_i, theta_e, phi)
+		Y[i] = value(H,G)
+	end
+	plot.plot(X,Y)
+	plot.xlim(-90,90)
+	plot.axvline(0,color="black")
+	plot.show()
+	return X,Y
 end
 
 plot_primary_plane(H::Hemisphere, thetaI::Real) = plot_primary_plane(H,thetaI,100)

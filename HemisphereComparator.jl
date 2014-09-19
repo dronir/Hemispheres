@@ -244,13 +244,14 @@ end
 
 # Make a plot of the primary plane
 # (theta_e varies from -85 to +85 with theta_i constant)
-function plot_primary_plane(H::ScatteringLaw, thetaI::Real, N::Integer)
+function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
 	X = linspace(-85.0, 85.0, N)
 	Y = zeros(N)
 	for i = 1:N
 		x = X[i]
 		theta_e = abs(x)*pi/180
-		phi = x<=0 ? eps() : pi-eps()
+		t = int(fld(theta_e, H.dTheta))+1
+		phi = x<=0 ? 10*eps() : pi-0.5*H.dPhi[t]
 		G = Geometry(thetaI, theta_e, phi)
 		Y[i] = value(H,G)
 	end

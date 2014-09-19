@@ -174,6 +174,7 @@ function load_hemisphere(filename::String)
 	data = ncread(filename, "Hemisphere")
 	data = squeeze(data,3)
 	nData = sum(nPhi)
+	ncclose()
 	return Hemisphere(nData,nTheta,dTheta,nPhi,dPhi,cIdx,dA,data)
 end
 

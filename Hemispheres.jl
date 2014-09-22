@@ -17,7 +17,7 @@ export Hemisphere
 export value, ratio, cell_index, point_in_cell
 export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
 export plot_primary_plane
-export LommelSeeliger, ModifiedLommelSeeliger, BennuNominal
+export LommelSeeliger, ModifiedLommelSeeliger, BennuNominal, Akimov
 
 # Hemisphere type
 immutable Hemisphere <: ScatteringLaw
@@ -37,6 +37,9 @@ Hemisphere(filename::String) = load_hemisphere(filename)
 
 
 immutable LommelSeeliger <: AnalyticalScatteringLaw
+end
+
+immutable Akimov <: AnalyticalScatteringLaw
 end
 
 immutable ModifiedLommelSeeliger <: AnalyticalScatteringLaw
@@ -66,6 +69,10 @@ function value(H::Hemisphere, G::Geometry)
 	return H.data[j,i]
 end
 
+function value(S::Akimov, G::Geometry)
+    alpha,beta,gamma = photometric_coordinates(G)
+    return cos(pi/(pi-alpha)*(gamma - alpha/2)) / cos(gamma) * cos(beta)^(alpha/(pi-alpha))
+end
 
 
 # Compute the ratio between two hemispheres.

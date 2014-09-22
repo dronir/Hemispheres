@@ -1,4 +1,4 @@
-module HemisphereComparator
+module Hemispheres
 
 using ScatteringGeometry
 using NetCDF

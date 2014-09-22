@@ -288,6 +288,27 @@ function plot_emergent_plane(H::Hemisphere, theta_e::Real, N::Integer)
 	return X,Y
 end
 
+# Make a plot of the disk
+# (theta_i and theta_e vary from -85 to +85 with alpha constant)
+function plot_disk(H::Hemisphere, alpha::Real, N::Integer)
+    alpha = alpha * 180/pi
+	X = linspace(-85.0+alpha, 85.0, N)
+	Y = zeros(N)
+	for i = 1:N
+		x = X[i]
+		theta_i = abs(x)*pi/180
+        theta_e = abs(x-alpha)*pi/180
+		phi = theta_e<=0 && theta_i > 0 ? pi : 0.0
+		G = Geometry(theta_i, theta_e, phi)
+		Y[i] = value(H,G)
+	end
+	plot.plot(X,Y)
+	plot.xlim(-90,90)
+	plot.axvline(0,color="black")
+	plot.show()
+	return X,Y
+end
+
 plot_primary_plane(H::Hemisphere, thetaI::Real) = plot_primary_plane(H,thetaI,1000)
 
 

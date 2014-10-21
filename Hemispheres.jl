@@ -1,9 +1,12 @@
 module Hemispheres
 
 using ScatteringGeometry
+println("Loading NetCDF...")
 using NetCDF
+println("Loading PyCall...")
 using PyCall
 
+println("Importing matplotlib...")
 @pyimport matplotlib
 @pyimport matplotlib.patches as patch
 @pyimport matplotlib.collections as collections
@@ -17,7 +20,8 @@ export Hemisphere
 export value, ratio, cell_index, point_in_cell
 export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
 export plot_primary_plane
-export LommelSeeliger, ModifiedLommelSeeliger, BennuNominal, Akimov
+export ScatteringLaw
+export LommelSeeliger, ModifiedLommelSeeliger, BennuNominal, Akimov, Hapke
 
 # Hemisphere type
 immutable Hemisphere <: ScatteringLaw
@@ -50,6 +54,10 @@ end
 
 BennuNominal() = ModifiedLommelSeeliger(-4.36e-2, 2.69e-4, -9.90e-7)
 
+immutable Hapke <: AnalyticalScatteringLaw
+	w::Float64
+end
+
 
 function value(S::LommelSeeliger, G::Geometry)
 	mu0 = cos(G.theta_i)
@@ -73,6 +81,14 @@ function value(S::Akimov, G::Geometry)
     alpha,beta,gamma = photometric_coordinates(G)
     return cos(pi/(pi-alpha)*(gamma - alpha/2)) / cos(gamma) * cos(beta)^(alpha/(pi-alpha))
 end
+
+function value(S::Hapke, G::Geometry)
+	mu0 = cos(G.theta_i)
+	mu = cos(G.theta_e)
+    return 0.25 * mu0 / (mu + mu0) * HapkeH(S.w, mu) * HapkeH(S.w, mu0)
+end
+
+HapkeH(w,mu) = (1 + 2mu) / (1 + 2*mu*sqrt(1 - w))
 
 
 # Compute the ratio between two hemispheres.
@@ -251,7 +267,7 @@ end
 
 # Make a plot of the primary plane
 # (theta_e varies from -85 to +85 with theta_i constant)
-function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
+function get_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
 	X = linspace(-85.0, 85.0, N)
 	Y = zeros(N)
 	for i = 1:N
@@ -262,11 +278,14 @@ function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
 		G = Geometry(thetaI, theta_e, phi)
 		Y[i] = value(H,G)
 	end
+	return X,Y
+end
+function plot_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
+	X,Y = get_primary_plane(H,thetaI,N)
 	plot.plot(X,Y)
 	plot.xlim(-90,90)
 	plot.axvline(0,color="black")
 	plot.show()
-	return X,Y
 end
 
 # Make a plot of the emergent plane

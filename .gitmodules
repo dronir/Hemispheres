@@ -1,0 +1,3 @@
+[submodule "GaussQuadrature.jl"]
+	path = GaussQuadrature.jl
+	url = https://github.com/billmclean/GaussQuadrature.jl.git

@@ -26,6 +26,7 @@ export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
 export plot_primary_plane
 export ScatteringLaw
 export LommelSeeliger, ModifiedLommelSeeliger, BennuNominal, Akimov, Hapke
+export Peltoniemi
 
 # Hemisphere type
 immutable Hemisphere <: ScatteringLaw
@@ -62,12 +63,12 @@ immutable Hapke <: AnalyticalScatteringLaw
 	w::Float64
 end
 
-immutable Peltoniemi
+immutable Peltoniemi <: AnalyticalScatteringLaw
 	rho::Real
 	Rse::AnalyticalScatteringLaw
 end
 
-
+value(::Type{LommelSeeliger}, G::Geometry) = value(LommelSeeliger(), G)
 function value(S::LommelSeeliger, G::Geometry)
 	mu0 = cos(G.theta_i)
 	mu = cos(G.theta_e)
@@ -86,6 +87,7 @@ function value(H::Hemisphere, G::Geometry)
 	return H.data[j,i]
 end
 
+value(::Type{Akimov}, G::Geometry) = value(Akimov(), G)
 function value(S::Akimov, G::Geometry)
     alpha,beta,gamma = photometric_coordinates(G)
     return cos(pi/(pi-alpha)*(gamma - alpha/2)) / cos(gamma) * cos(beta)^(alpha/(pi-alpha))
@@ -102,47 +104,63 @@ HapkeH(w,mu) = (1 + 2mu) / (1 + 2*mu*sqrt(1 - w))
 
 function value(S::Peltoniemi, G::Geometry)
 	W = PeltoniemiW(S,G)
-	X,weight = hermite(5)
+	X,weight = hermite(3)
 	X *= sqrt(2)*S.rho
 	integral = 0.0
-	for i = 1:5
-		for j = 1:5
-			f = PeltoniemiIntegrand(S,G,X[i],X[j])
-			integral += f * weight[i]*weight[j]
+	vecI = [sin(G.theta_i), 0.0, cos(G.theta_i)]
+	vecE = [sin(G.theta_e)*cos(G.phi), sin(G.theta_e)*sin(G.phi), cos(G.theta_e)]
+	f = 0.0
+	T = [0.0, 0.0, 1.0]
+	for i = 1:3
+		T[1] = X[i]
+		w1 = weight[i]
+		for j = 1:3
+			T[2] = X[j]
+			f = PeltoniemiIntegrand(S,vecI,vecE,T)
+			integral += f * w1*weight[j]
 		end
 	end
 	return W * integral / sqrt(pi)
 end
 
-function PeltoniemiIntegrand(S::Peltoniemi, G::Geometry, t1::Real, t2::Real)
-	i1 = sin(G.theta_i)
-	i2 = 0.0
-	i3 = cos(G.theta_i)
-	e1 = sin(G.theta_e)*cos(G.phi)
-	e2 = sin(G.theta_e)*sin(G.phi)
-	e3 = cos(G.theta_e)
-	mux0 = i1*t1 + i2*t2 + i3
-	mux = e1*t1 + e2*t2 + e3
-	#mu0 = i3
-	#mu = e3
-	#Gx = Geometry(acos(mux0), acos(mux))
-	return (mux0*mux) / (i3*e3) / sqrt(1 + t1^2 + t2^2) #* value(S.Rse, G)
+function PeltoniemiIntegrand(S::Peltoniemi, vecI::Vector, vecE::Vector, T::Vector)
+	t = norm(T)
+	mux0 = dot(vecI, T) / t
+	mux = dot(vecE, T) / t
+	p_i = vecI - T*dot(T,vecI)/t
+	p_e = vecE - T*dot(T,vecI)/t
+	if norm(p_i) > 0 && norm(p_e) > 0
+		phi = acos(dot(p_i, p_e))
+	else
+		phi = 0.0
+	end
+	Gx = Geometry(acos(mux0), acos(mux), phi)
+	if mux0 > 0 && mux > 0
+		return value(S.Rse, Gx) * mux0 * mux * t / (vecI[3]*vecE[3])
+	else
+		return 0.0
+	end
 end
 
-function PeltoniemiG(xi::Real)
+function PeltoniemiG(invxi::Real)
 	X = Normal(0,1)
-	n = pdf(X, xi)
-	N = cdf(X, xi)
-	return n/xi - N
+	if invxi > 0
+		xi = 1/invxi
+		n = pdf(X, xi)
+		N = cdf(X, -xi)
+		return n/xi - N
+	else
+		return 1
+	end
 end
 
 function PeltoniemiW(S::Peltoniemi, G::Geometry)
 	mu0 = cos(G.theta_i)
 	mu = cos(G.theta_e)
-	xi = mu / S.rho * sqrt(1-mu^2)
-	xi0 = mu0 / S.rho * sqrt(1-mu0^2)
-	V = 1 / (1 + PeltoniemiG(xi))
-	V0 = 1 / (1 + PeltoniemiG(xi0))
+	invxi = (S.rho * sqrt(1-mu^2)) / mu
+	invxi0 = (S.rho * sqrt(1-mu0^2)) / mu0
+	V = 1 / (1 + PeltoniemiG(invxi))
+	V0 = 1 / (1 + PeltoniemiG(invxi0))
 	s = sqrt(sin(G.phi/2))
 	return min(V,V0) * (1-s) + V*V0*s
 end

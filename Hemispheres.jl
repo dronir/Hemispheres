@@ -128,7 +128,7 @@ function PeltoniemiIntegrand(S::Peltoniemi, vecI::Vector, vecE::Vector, T::Vecto
 	mux0 = dot(vecI, T) / t
 	mux = dot(vecE, T) / t
 	p_i = vecI - T*dot(T,vecI)/t
-	p_e = vecE - T*dot(T,vecI)/t
+	p_e = vecE - T*dot(T,vecE)/t
 	if norm(p_i) > 0 && norm(p_e) > 0
 		phi = acos(dot(p_i, p_e))
 	else

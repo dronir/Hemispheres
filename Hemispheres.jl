@@ -68,6 +68,7 @@ end
 immutable Peltoniemi <: AnalyticalScatteringLaw
 	rho::Real
 	Rse::AnalyticalScatteringLaw
+	Nq::Integer
 end
 
 immutable Minnaert <: AnalyticalScatteringLaw
@@ -114,17 +115,18 @@ HapkeH(w,mu) = (1 + 2mu) / (1 + 2*mu*sqrt(1 - w))
 
 function value(S::Peltoniemi, G::Geometry)
 	W = PeltoniemiW(S,G)
-	X,weight = hermite(7)
+	X,weight = hermite(S.Nq)
 	X *= sqrt(2)*S.rho
 	integral = 0.0
-	vecI = [sin(G.theta_i), 0.0, cos(G.theta_i)]
-	vecE = [sin(G.theta_e)*cos(G.phi), sin(G.theta_e)*sin(G.phi), cos(G.theta_e)]
+	rndphi = 2*pi*rand()
+	vecI = [sin(G.theta_i)*cos(rndphi), sin(G.theta_i)*sin(rndphi), cos(G.theta_i)]
+	vecE = [sin(G.theta_e)*cos(G.phi+rndphi), sin(G.theta_e)*sin(G.phi+rndphi), cos(G.theta_e)]
 	f = 0.0
 	T = [0.0, 0.0, 1.0]
-	for i = 1:7
+	for i = 1:S.Nq
 		T[1] = X[i]
 		w1 = weight[i]
-		for j = 1:7
+		for j = 1:S.Nq
 			T[2] = X[j]
 			f = PeltoniemiIntegrand(S,vecI,vecE,T)
 			integral += f * w1*weight[j]
@@ -137,15 +139,15 @@ function PeltoniemiIntegrand(S::Peltoniemi, vecI::Vector, vecE::Vector, T::Vecto
 	t = norm(T)
 	mux0 = dot(vecI, T) / t
 	mux = dot(vecE, T) / t
-	p_i = vecI - T*mux0
-	p_e = vecE - T*mux
-	if norm(p_i) > 0 && norm(p_e) > 0
-		phi = acos(dot(p_i, p_e) / norm(p_i) / norm(p_e))
-	else
-		phi = 0.0
-	end
-	Gx = Geometry(acos(mux0), acos(mux), phi)
 	if mux0 > 0 && mux > 0
+		p_i = vecI - T*mux0
+		p_e = vecE - T*mux
+		if norm(p_i) > 0 && norm(p_e) > 0
+			phi = acos(dot(p_i, p_e) / norm(p_i) / norm(p_e))
+		else
+			phi = 0.0
+		end
+		Gx = Geometry(acos(mux0), acos(mux), phi)
 		return value(S.Rse, Gx) * mux0 * mux * t / (vecI[3]*vecE[3])
 	else
 		return 0.0

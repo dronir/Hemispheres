@@ -44,6 +44,8 @@ end
 Hemisphere(filename::String) = load_hemisphere(filename)
 
 
+immutable Lambert <: AnalyticalScatteringLaw
+end
 
 immutable LommelSeeliger <: AnalyticalScatteringLaw
 end
@@ -68,6 +70,14 @@ immutable Peltoniemi <: AnalyticalScatteringLaw
 	Rse::AnalyticalScatteringLaw
 end
 
+immutable Minnaert <: AnalyticalScatteringLaw
+	nu::Real
+end
+
+
+value(::Type{Lambert}, G::Geometry) = value(Lambert(), G)
+value(S::Lambert, G::Geometry) = cos(G.theta_i)
+
 value(::Type{LommelSeeliger}, G::Geometry) = value(LommelSeeliger(), G)
 function value(S::LommelSeeliger, G::Geometry)
 	mu0 = cos(G.theta_i)
@@ -90,7 +100,7 @@ end
 value(::Type{Akimov}, G::Geometry) = value(Akimov(), G)
 function value(S::Akimov, G::Geometry)
     alpha,beta,gamma = photometric_coordinates(G)
-    return cos(pi/(pi-alpha)*(gamma - alpha/2)) / cos(gamma) * cos(beta)^(alpha/(pi-alpha))
+    return cos(alpha/2) * cos(pi/(pi-alpha)*(gamma - alpha/2)) / cos(gamma) * cos(beta)^(alpha/(pi-alpha))
 end
 
 function value(S::Hapke, G::Geometry)
@@ -104,17 +114,17 @@ HapkeH(w,mu) = (1 + 2mu) / (1 + 2*mu*sqrt(1 - w))
 
 function value(S::Peltoniemi, G::Geometry)
 	W = PeltoniemiW(S,G)
-	X,weight = hermite(3)
+	X,weight = hermite(7)
 	X *= sqrt(2)*S.rho
 	integral = 0.0
 	vecI = [sin(G.theta_i), 0.0, cos(G.theta_i)]
 	vecE = [sin(G.theta_e)*cos(G.phi), sin(G.theta_e)*sin(G.phi), cos(G.theta_e)]
 	f = 0.0
 	T = [0.0, 0.0, 1.0]
-	for i = 1:3
+	for i = 1:7
 		T[1] = X[i]
 		w1 = weight[i]
-		for j = 1:3
+		for j = 1:7
 			T[2] = X[j]
 			f = PeltoniemiIntegrand(S,vecI,vecE,T)
 			integral += f * w1*weight[j]
@@ -127,10 +137,10 @@ function PeltoniemiIntegrand(S::Peltoniemi, vecI::Vector, vecE::Vector, T::Vecto
 	t = norm(T)
 	mux0 = dot(vecI, T) / t
 	mux = dot(vecE, T) / t
-	p_i = vecI - T*dot(T,vecI)/t
-	p_e = vecE - T*dot(T,vecE)/t
+	p_i = vecI - T*mux0
+	p_e = vecE - T*mux
 	if norm(p_i) > 0 && norm(p_e) > 0
-		phi = acos(dot(p_i, p_e))
+		phi = acos(dot(p_i, p_e) / norm(p_i) / norm(p_e))
 	else
 		phi = 0.0
 	end
@@ -163,6 +173,13 @@ function PeltoniemiW(S::Peltoniemi, G::Geometry)
 	V0 = 1 / (1 + PeltoniemiG(invxi0))
 	s = sqrt(sin(G.phi/2))
 	return min(V,V0) * (1-s) + V*V0*s
+end
+
+
+function value(S::Minnaert, G::Geometry)
+	mu0 = cos(G.theta_i)
+	mu = cos(G.theta_e)
+	return mu0^S.nu * mu^(S.nu-1)
 end
 
 

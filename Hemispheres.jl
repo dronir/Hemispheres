@@ -1,6 +1,7 @@
 module Hemispheres
 
-using ScatteringGeometry
+include("ScatteringGeometry.jl")
+using .ScatteringGeometry
 println("Loading NetCDF...")
 using NetCDF
 println("Loading PyCall...")

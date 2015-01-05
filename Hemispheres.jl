@@ -148,7 +148,7 @@ function PeltoniemiIntegrand(S::Peltoniemi, vecI::Vector, vecE::Vector, T::Vecto
 			phi = 0.0
 		end
 		Gx = Geometry(acos(mux0), acos(mux), phi)
-		return value(S.Rse, Gx) * mux0 * mux * t / (vecI[3]*vecE[3])
+		return value(S.Rse, Gx) * 1 * mux * t / (vecI[3]*vecE[3])
 	else
 		return 0.0
 	end

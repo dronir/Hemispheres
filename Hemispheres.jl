@@ -4,19 +4,10 @@ include("ScatteringGeometry.jl")
 using .ScatteringGeometry
 println("Loading NetCDF...")
 using NetCDF
-println("Loading PyCall...")
-using PyCall
 using Distributions
 
-reload("GaussQuadrature.jl/src/GaussQuadrature.jl")
-using GaussQuadrature
-
-println("Importing matplotlib...")
-@pyimport matplotlib
-@pyimport matplotlib.patches as patch
-@pyimport matplotlib.collections as collections
-@pyimport matplotlib.pyplot as plot
-@pyimport matplotlib.cm as colormap
+include("GaussQuadrature.jl/src/GaussQuadrature.jl")
+using .GaussQuadrature
 
 abstract ScatteringLaw
 abstract AnalyticalScatteringLaw <: ScatteringLaw
@@ -30,7 +21,7 @@ export LommelSeeliger, ModifiedLommelSeeliger, BennuNominal, Akimov, Hapke
 export Peltoniemi
 
 # Hemisphere type
-immutable Hemisphere <: ScatteringLaw
+type Hemisphere <: ScatteringLaw
 	nData::Int64
 	nTheta::Int64
 	dTheta::Float64
@@ -49,9 +40,17 @@ immutable Lambert <: AnalyticalScatteringLaw
 end
 
 immutable LommelSeeliger <: AnalyticalScatteringLaw
+	omega::Float64
 end
+LommelSeeliger() = LommelSeeliger(1.0)
 
 immutable Akimov <: AnalyticalScatteringLaw
+end
+
+immutable LSintegral <: AnalyticalScatteringLaw
+end
+
+immutable Lintegral <: AnalyticalScatteringLaw
 end
 
 immutable ModifiedLommelSeeliger <: AnalyticalScatteringLaw
@@ -66,11 +65,6 @@ immutable Hapke <: AnalyticalScatteringLaw
 	w::Float64
 end
 
-immutable Peltoniemi <: AnalyticalScatteringLaw
-	rho::Real
-	Rse::AnalyticalScatteringLaw
-	Nq::Integer
-end
 
 immutable Minnaert <: AnalyticalScatteringLaw
 	nu::Real
@@ -84,7 +78,7 @@ value(::Type{LommelSeeliger}, G::Geometry) = value(LommelSeeliger(), G)
 function value(S::LommelSeeliger, G::Geometry)
 	mu0 = cos(G.theta_i)
 	mu = cos(G.theta_e)
-	return mu0 / (mu+mu0) / (4*pi)
+	return S.omega * mu0 / (mu+mu0) / (4*pi)
 end
 
 function value(S::ModifiedLommelSeeliger, G::Geometry)
@@ -114,76 +108,51 @@ end
 HapkeH(w,mu) = (1 + 2mu) / (1 + 2*mu*sqrt(1 - w))
 
 
-function value(S::Peltoniemi, G::Geometry)
-	W = PeltoniemiW(S,G)
-	X,weight = hermite(S.Nq)
-	X *= sqrt(2)*S.rho
-	integral = 0.0
-	rndphi = 2*pi*rand()
-	vecI = [sin(G.theta_i)*cos(rndphi), sin(G.theta_i)*sin(rndphi), cos(G.theta_i)]
-	vecE = [sin(G.theta_e)*cos(G.phi+rndphi), sin(G.theta_e)*sin(G.phi+rndphi), cos(G.theta_e)]
-	f = 0.0
-	T = [0.0, 0.0, 1.0]
-	for i = 1:S.Nq
-		T[1] = X[i]
-		w1 = weight[i]
-		for j = 1:S.Nq
-			T[2] = X[j]
-			f = PeltoniemiIntegrand(S,vecI,vecE,T)
-			integral += f * w1*weight[j]
-		end
-	end
-	return W * integral / sqrt(pi)
-end
-
-function PeltoniemiIntegrand(S::Peltoniemi, vecI::Vector, vecE::Vector, T::Vector)
-	t = norm(T)
-	mux0 = dot(vecI, T) / t
-	mux = dot(vecE, T) / t
-	if mux0 > 0 && mux > 0
-		p_i = vecI - T*mux0
-		p_e = vecE - T*mux
-		if norm(p_i) > 0 && norm(p_e) > 0
-			phi = acos(dot(p_i, p_e) / norm(p_i) / norm(p_e))
-		else
-			phi = 0.0
-		end
-		Gx = Geometry(acos(mux0), acos(mux), phi)
-		return value(S.Rse, Gx) * 1 * mux * t / (vecI[3]*vecE[3])
-	else
-		return 0.0
-	end
-end
-
-function PeltoniemiG(invxi::Real)
-	X = Normal(0,1)
-	if invxi > 0
-		xi = 1/invxi
-		n = pdf(X, xi)
-		N = cdf(X, -xi)
-		return n/xi - N
-	else
-		return 1
-	end
-end
-
-function PeltoniemiW(S::Peltoniemi, G::Geometry)
-	mu0 = cos(G.theta_i)
-	mu = cos(G.theta_e)
-	invxi = (S.rho * sqrt(1-mu^2)) / mu
-	invxi0 = (S.rho * sqrt(1-mu0^2)) / mu0
-	V = 1 / (1 + PeltoniemiG(invxi))
-	V0 = 1 / (1 + PeltoniemiG(invxi0))
-	s = sqrt(sin(G.phi/2))
-	return min(V,V0) * (1-s) + V*V0*s
-end
-
-
 function value(S::Minnaert, G::Geometry)
 	mu0 = cos(G.theta_i)
 	mu = cos(G.theta_e)
 	return mu0^S.nu * mu^(S.nu-1)
 end
+
+
+value(::Type{LSintegral}, G::Geometry) = value(LSintegral(), G)
+value(::Type{Lintegral}, G::Geometry) = value(Lintegral(), G)
+
+function value(S::LSintegral, G::Geometry)
+	alpha = phase_angle(G)
+	return (1 - sin(alpha/2) * tan(alpha / 2) * log(cot(alpha / 4))) / 32
+end
+
+function value(S::Lintegral, G::Geometry)
+	alpha = phase_angle(G)
+	return (sin(alpha) + (pi - alpha) * cos(alpha)) / (6 * pi)
+end
+
+
+immutable AnalyticalLS <: AnalyticalScatteringLaw
+	omega0::Float64
+	P0::Float64
+end
+function value(S::AnalyticalLS, G::Geometry)
+	alpha = phase_angle(G)
+    omegaV = 0.5 * S.omega0 * S.P0
+    PV = (1 - sin(alpha/2) * tan(alpha / 2) * log(cot(alpha / 4)))
+	return 0.25 * omegaV * PV / (cos(G.theta_i) + cos(G.theta_e))
+end
+
+immutable AntiShadow <: AnalyticalScatteringLaw
+    omega0::Float64
+end
+AntiShadow() = AntiShadow(0.1)
+function value(S::AntiShadow, G::Geometry)
+	alpha = phase_angle(G)
+    mu0 = cos(G.theta_i)
+    mu = cos(G.theta_e)
+    omegaV = 2/3 * (1 - log(2)) * S.omega0
+    PV = (1 - sin(alpha/2) * tan(alpha / 2) * log(cot(alpha / 4))) / (4/3 * (1 - log(2)))
+	return 0.25/pi * mu0 / (mu + mu0) * omegaV * PV
+end
+
 
 
 # Compute the ratio between two hemispheres.
@@ -261,9 +230,11 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 			for k = 1:nTheta
 				for n = 1:N
 					theta_i = (k-rand())*dTheta
+					#theta_i = min(theta_i, 1.5607966601082313)
 					ca = cos((i-1)*dTheta)
 					cb = cos(i*dTheta)
 					theta_e = acos(ca - rand()*(ca-cb))
+					#theta_e = min(theta_e, 1.5607966601082313)
 					phi = (j-rand())*dPhi[i]
 					G = Geometry(theta_i, theta_e, phi)
 					data[k, cIdx[i]+j-1] += value(S, G)
@@ -324,7 +295,9 @@ end
 
 
 # This function makes a plot of a given hemisphere.
-function plot_hemisphere(H::Hemisphere, thetaI::Real)
+plot_hemisphere(H::Hemisphere, thetaI::Real) = plot_hemisphere(H,thetaI,"",[])
+plot_hemisphere(H::Hemisphere, thetaI::Real, saveplot::String) = plot_hemisphere(H,thetaI,saveplot,[])
+function plot_hemisphere(H::Hemisphere, thetaI::Real, saveplot::String, vrange::Array)
     patches = Any[]
 	const DEG = 57.295791433
     N = H.nTheta
@@ -349,15 +322,24 @@ function plot_hemisphere(H::Hemisphere, thetaI::Real)
         newdata[2*i-1] = H.data[idx,i]
         newdata[2*i] = H.data[idx,i]
 	end
-    p = collections.PatchCollection(patches, cmap=colormap.jet, linewidths=zeros(2*N))
+	if vrange != []
+		p = collections.PatchCollection(patches, cmap=colormap.gray, clim=vrange, linewidths=zeros(2*N))
+	else
+		p = collections.PatchCollection(patches, cmap=colormap.gray, linewidths=zeros(2*N))
+	end
     p[:set_array](newdata[1:n])
     fig, ax = plot.subplots()
     ax[:add_collection](p)
-    fig[:colorbar](p)
     plot.xlim(-90, 90)
     plot.ylim(-90, 90)
     #plot.title("foo")
-	plot.show()
+	#plot.colorbar(p)
+	if saveplot != ""
+		println("Saving to $saveplot...")
+		plot.savefig(saveplot)
+	else
+		plot.show()
+	end
 end
 
 # Make a plot of the primary plane

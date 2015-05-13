@@ -149,8 +149,20 @@ function value(S::AntiShadow, G::Geometry)
     mu0 = cos(G.theta_i)
     mu = cos(G.theta_e)
     omegaV = 2/3 * (1 - log(2)) * S.omega0
-    PV = (1 - sin(alpha/2) * tan(alpha / 2) * log(cot(alpha / 4))) / (4/3 * (1 - log(2)))
+    PV = 0.75*(1 - sin(alpha/2) * tan(alpha / 2) * log(cot(alpha / 4))) / (1 - log(2))
 	return 0.25/pi * mu0 / (mu + mu0) * omegaV * PV
+end
+
+type ShadowedLS <: ScatteringLaw
+	hemiS::Hemisphere
+	omega::Float64
+	Pv::Function
+end
+function value(S::ShadowedLS, G::Geometry)
+	mu0 = cos(G.theta_i)
+	mu = cos(G.theta_e)
+	alpha = phase_angle(G)
+	return S.omega/4 * S.Pv(alpha) * value(S.hemiS,G) * mu0 / (mu + mu0)
 end
 
 
@@ -261,7 +273,9 @@ function load_hemisphere(filename::String)
 	cIdx = ncgetatt(filename, "Global", "cIdx")
 	dA = ncgetatt(filename, "Global", "dA")
 	data = ncread(filename, "Hemisphere")
-	data = squeeze(data,3)
+	if ndims(data) == 3
+		data = squeeze(data,3)
+	end
 	nData = sum(nPhi)
 	ncclose()
 	return Hemisphere(nData,nTheta,dTheta,nPhi,dPhi,cIdx,dA,data)

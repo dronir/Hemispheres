@@ -166,6 +166,9 @@ function value(S::ShadowedLS, G::Geometry)
 end
 
 
+planaralbedo(S::LommelSeeliger, mu0::Real) = 2*(mu0*log(mu0) - mu0*log(mu0+1) + 1)
+
+
 
 # Compute the ratio between two hemispheres.
 function ratio(A::Hemisphere, B::Hemisphere)
@@ -266,7 +269,6 @@ generate_hemisphere(S::ScatteringLaw, nTheta::Integer) = generate_hemisphere(S, 
 # This function loads a Hemisphere from a hemiScat NetCDF file.
 function load_hemisphere(filename::String)
 	foo = ncinfo(filename)
-	nTheta = ncgetatt(filename, "Global", "nThetaI")
 	dTheta = ncgetatt(filename, "Global", "dTheta")
 	nPhi = ncgetatt(filename, "Global", "nPhi")
 	dPhi = ncgetatt(filename, "Global", "dPhi")
@@ -276,6 +278,7 @@ function load_hemisphere(filename::String)
 	if ndims(data) == 3
 		data = squeeze(data,3)
 	end
+	nTheta = size(data)[1]
 	nData = sum(nPhi)
 	ncclose()
 	return Hemisphere(nData,nTheta,dTheta,nPhi,dPhi,cIdx,dA,data)

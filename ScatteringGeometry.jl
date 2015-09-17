@@ -13,7 +13,9 @@ function phase_angle(G::Geometry)
 	i = G.theta_i
 	e = G.theta_e
 	p = G.phi
-	return acos(cos(i)*cos(e) + sin(i)*sin(e)*cos(p))
+	cosa = cos(i)*cos(e) + sin(i)*sin(e)*cos(p)
+	cosa = clamp(cosa, -1+eps(), 1-eps())
+	return acos(cosa)
 end
 
 function beta_angle(G::Geometry)

@@ -9,6 +9,17 @@ immutable Geometry
 	phi::Float64
 end
 
+function Geometry(i::Vector, e::Vector, n::Vector)
+	mu0 = dot(i, n)
+	mu = dot(e, n)
+	cosa = dot(i, e)
+	theta_i = acos(mu0)
+	theta_e = acos(mu)
+	phi = acos((cosa - mu0*mu) / (sin(theta_i) * sin(theta_e)))
+	return Geometry(theta_i, theta_e, phi)
+end
+
+
 function phase_angle(G::Geometry)
 	i = G.theta_i
 	e = G.theta_e

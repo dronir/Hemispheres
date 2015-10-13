@@ -30,6 +30,7 @@ type Hemisphere <: ScatteringLaw
 	cIdx::Array{Int64}
 	dA::Array{Float64}
 	data::Array{Float64}
+	planar::Array{Float64}
 end
 
 # Construct Hemisphere directly from file.
@@ -72,13 +73,13 @@ end
 
 
 value(::Type{Lambert}, G::Geometry) = value(Lambert(), G)
-value(S::Lambert, G::Geometry) = cos(G.theta_i)
+value(S::Lambert, G::Geometry) = 1.0
 
 value(::Type{LommelSeeliger}, G::Geometry) = value(LommelSeeliger(), G)
 function value(S::LommelSeeliger, G::Geometry)
 	mu0 = cos(G.theta_i)
 	mu = cos(G.theta_e)
-	return S.omega * mu0 / (mu+mu0) / (4*pi)
+	return S.omega / (mu+mu0) / 4
 end
 
 function value(S::ModifiedLommelSeeliger, G::Geometry)
@@ -86,11 +87,6 @@ function value(S::ModifiedLommelSeeliger, G::Geometry)
 	mu = cos(G.theta_e)
 	alpha = phase_angle(G)
 	return mu0 / (mu+mu0) / (4*pi) * exp(S.a*alpha + S.b*alpha^2 + S.c*alpha^3)
-end
-
-function value(H::Hemisphere, G::Geometry)
-	i,j = cell_index(H,G)
-	return H.data[j,i]
 end
 
 value(::Type{Akimov}, G::Geometry) = value(Akimov(), G)
@@ -113,6 +109,7 @@ function value(S::Minnaert, G::Geometry)
 	mu = cos(G.theta_e)
 	return mu0^S.nu * mu^(S.nu-1)
 end
+
 
 
 value(::Type{LSintegral}, G::Geometry) = value(LSintegral(), G)
@@ -140,6 +137,10 @@ function value(S::AnalyticalLS, G::Geometry)
 	return 0.25 * omegaV * PV / (cos(G.theta_i) + cos(G.theta_e))
 end
 
+
+
+P_LS(alpha) = 0.75*(1 - sin(alpha/2) * tan(alpha / 2) * log(cot(alpha / 4))) / (1 - log(2))
+
 immutable AntiShadow <: AnalyticalScatteringLaw
     omega0::Float64
 end
@@ -149,9 +150,11 @@ function value(S::AntiShadow, G::Geometry)
     mu0 = cos(G.theta_i)
     mu = cos(G.theta_e)
     omegaV = 2/3 * (1 - log(2)) * S.omega0
-    PV = 0.75*(1 - sin(alpha/2) * tan(alpha / 2) * log(cot(alpha / 4))) / (1 - log(2))
+    PV = P_LS(alpha)
 	return 0.25/pi * mu0 / (mu + mu0) * omegaV * PV
 end
+
+
 
 type ShadowedLS <: ScatteringLaw
 	hemiS::Hemisphere
@@ -166,14 +169,106 @@ function value(S::ShadowedLS, G::Geometry)
 end
 
 
-planaralbedo(S::LommelSeeliger, mu0::Real) = 2*(mu0*log(mu0) - mu0*log(mu0+1) + 1)
+# 
+immutable antiR <: AnalyticalScatteringLaw end
+function value(S::antiR, G::Geometry)
+	mu0 = cos(G.theta_i)
+	alpha = phase_angle(G)
+	return 0.1 * P_LS(alpha) * 4 * mu0
+end
 
 
+function planaralbedo(S::LommelSeeliger, theta::Real) 
+	mu = cos(theta)
+	mu<eps(theta) ? 0.5*S.omega : S.omega*(mu*log(mu) - mu*log(mu+1) + 1) / 2
+end
+planaralbedo(S::Lambert, theta::Real) = 1.0
+
+
+function BRDF(H::Hemisphere)
+	A = generate_hemisphere(antiR(), H.nTheta, 10)
+	return ratio(H,A)
+end
+
+
+
+# A phase function as a "scattering law"
+
+function interpolate_phasecurve(Curve::Array, alpha::Real)
+    for i = 1:size(Curve)[1]-1
+        if Curve[i+1, 1] > alpha
+            delta = (alpha - Curve[i, 1]) / (Curve[i+1, 1] - Curve[i, 1])
+            P = Curve[i, 2] + (Curve[i+1, 2] - Curve[i, 2]) * delta
+            return P
+		end
+	end
+end
+
+interpolate_phasecurve(filename::String, alpha::Real) = interpolate_phasecurve(readcsv(filename), alpha)
+
+immutable PhaseFunction <: ScatteringLaw
+	data::Array
+end
+
+PhaseFunction(filename::String) = PhaseFunction(readcsv(filename))
+
+function value(S::PhaseFunction, G::Geometry)
+	alpha = phase_angle(G)
+	return interpolate_phasecurve(S.data, alpha)
+end
+
+
+
+
+#
+# Hemisphere stuff
+
+function planaralbedo(H::Hemisphere, theta_i::Real)
+	theta_i = abs(theta_i)
+	if theta_i > pi/2
+		return 0.0
+	end
+	idx = int(fld(theta_i, H.dTheta)) + 1 
+	return H.planar[idx]
+end
+
+
+function raw_planaralbedo(H::Hemisphere, theta_i::Real)
+	Ap = 0.0
+	theta_i = abs(theta_i)
+	if theta_i > pi/2
+		return 0.0
+	end
+	idx = int(fld(theta_i, H.dTheta)) + 1 
+	for i = 1:H.nTheta
+		theta_e = (i-1)*H.dTheta
+		# dA = sin(theta) dtheta dphi, basically
+		t = cos(theta_e) * H.dA[i]
+		for j = 0:H.nPhi[i]-1
+			Ap += t * H.data[idx, H.cIdx[i]+j]
+		end
+	end
+	return 2 * Ap / pi
+end
+
+import Base.*, Base./
 
 # Compute the ratio between two hemispheres.
-function ratio(A::Hemisphere, B::Hemisphere)
+function /(A::Hemisphere, B::Hemisphere)
 	if A.nTheta==B.nTheta
-		return Hemisphere(A.nData, A.nTheta, A.dTheta, A.nPhi, A.dPhi, A.cIdx, A.dA, A.data./B.data)
+		H = Hemisphere(A.nData, A.nTheta, A.dTheta, A.nPhi, A.dPhi, A.cIdx, A.dA, A.data./B.data, A.planar)
+		compute_planar!(H)
+		return H
+	else
+		error("Hemispheres don't match.")
+	end
+end
+
+function *(A::Hemisphere, B::Hemisphere)
+	if A.nTheta==B.nTheta
+		H = Hemisphere(A.nData, A.nTheta, A.dTheta, A.nPhi, A.dPhi, A.cIdx, A.dA, A.data.*B.data, A.planar)
+		compute_planar!(H)
+		return H
 	else
 		error("Hemispheres don't match.")
 	end
@@ -216,9 +311,17 @@ function point_in_cell(H::Hemisphere, idx::Integer)
 end
 
 
+function value(H::Hemisphere, G::Geometry)
+	i,j = cell_index(H,G)
+	return H.data[j,i]
+end
+
+
+
+
 
 # This function generates a hemisphere with a given analytical scattering law.
-function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSamples::Integer)
+function generate_hemisphere(S::ScatteringLaw, nTheta::Integer, nSamples::Integer)
 	cIdx = ones(Int64, nTheta)
 	nPhi = ones(Int64, nTheta)
 	dPhi = zeros(Float64, nTheta)
@@ -259,12 +362,19 @@ function generate_hemisphere(S::AnalyticalScatteringLaw, nTheta::Integer, nSampl
 		data[1:end, cIdx[i]:cIdx[i]+nPhi[i]-1] /= N
 	end
 #	data /= nSamples
-	Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data)
+	H = Hemisphere(nBins, nTheta, dTheta, nPhi, dPhi, cIdx, dA, data, zeros(nTheta))
+	compute_planar!(H)
+	return H
 end
 
 generate_hemisphere(S::ScatteringLaw, nTheta::Integer) = generate_hemisphere(S, nTheta, 1000)
 
-
+function compute_planar!(H::Hemisphere)
+	for i = 1:H.nTheta
+		theta = (i-0.5) * H.dTheta
+		H.planar[i] = raw_planaralbedo(H, theta)
+	end
+end
 
 # This function loads a Hemisphere from a hemiScat NetCDF file.
 function load_hemisphere(filename::String)
@@ -281,7 +391,10 @@ function load_hemisphere(filename::String)
 	nTheta = size(data)[1]
 	nData = sum(nPhi)
 	ncclose()
-	return Hemisphere(nData,nTheta,dTheta,nPhi,dPhi,cIdx,dA,data)
+	planar = zeros(nTheta)
+	H = Hemisphere(nData,nTheta,dTheta,nPhi,dPhi,cIdx,dA,data,planar)
+	compute_planar!(H)
+	return H
 end
 
 

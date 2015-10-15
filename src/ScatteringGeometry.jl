@@ -1,6 +1,7 @@
 module ScatteringGeometry
 
 export Geometry, phase_angle, beta_angle, gamma_angle, photometric_coordinates
+export random_geometry
 
 # Illumination geometry type
 immutable Geometry
@@ -50,6 +51,19 @@ function photometric_coordinates(G::Geometry)
 	beta = atan(tanbeta)
     cosgamma = cos(ex) / cos(beta)
     return (alpha, beta, acos(cosgamma))
+end
+
+random_geometry() = random_geometry(0.0)
+function random_geometry(alpha::Real)
+	lat = acos(rand())
+	lon = (alpha - pi/2) + rand() * (pi - alpha)
+	mu = cos(lon)*cos(lat)
+	mu0 = cos(lon-alpha)*cos(lat)
+	theta_e = acos(mu)
+	theta_i = acos(mu0)
+	cosphi = abs(alpha)<eps() ? 1.0 : (cos(alpha) - mu0*mu) / (sin(theta_i) * sin(theta_e))
+	phi = acos(cosphi)
+	Geometry(theta_i, theta_e, phi)
 end
 
 

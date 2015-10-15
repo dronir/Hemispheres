@@ -10,6 +10,8 @@ using ScatteringGeometry
 using PhaseFunctions
 using Hemispheres
 
+import PhaseFunctions.value
+
 export value, Lambert, LommelSeeliger, ParticulateMedium, AntiShadow, AntiR
 export spherealbedo, geometricalbedo
 
@@ -39,7 +41,7 @@ value(::Type{LommelSeeliger}, G::Geometry) = value(LommelSeeliger(), G)
 function value(S::LommelSeeliger, G::Geometry)
 	mu0 = cos(G.theta_i)
 	mu = cos(G.theta_e)
-	return S.omega / (mu+mu0) / 4
+	return S.omega * value(S.P, G) / (mu+mu0) / (4pi)
 end
 
 function planaralbedo(S::LommelSeeliger, theta::Real) 
@@ -113,6 +115,20 @@ function geometricalbedo(S::ScatteringLaw)
 		s += cos(th) * value(S, Geometry(th,th,0.0))
 	end
 	return s / 100
+end
+
+
+# ---- Sphere integrated brightness ----
+
+const Niter = 100000
+
+function integrated(S::ScatteringLaw, alpha::Real)
+	s = 0.0
+	for i = 1:Niter
+		G = random_geometry(alpha)
+		s += value(S,G) * cos(G.theta_i) * cos(G.theta_e)
+	end
+	pi*s/Niter
 end
 
 	

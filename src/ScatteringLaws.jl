@@ -53,8 +53,7 @@ end
 
 geometricalbedo(S::LommelSeeliger) = S.omega / 8 * value(S.P, 0.0)
 spherealbedo(S::LommelSeeliger) = 2/3 * (1 - log(2))
-integrated(S::LommelSeeliger, alpha::Real) = pi/32 * value(S.P, alpha) * (
-		alpha < eps() ? 1.0 : 1 - sin(alpha/2) * tan(alpha/2) * log(cot(alpha/4)))
+integrated(S::LommelSeeliger, alpha::Real) = value(S.P, alpha)/32 * (alpha < eps() ? 1.0 : 1 - sin(alpha/2) * tan(alpha/2) * log(cot(alpha/4)))
 
 
 
@@ -123,11 +122,15 @@ end
 # ---- Sphere integrated brightness, generic ----
 
 function integrated(S::ScatteringLaw, alpha::Real)
+	if alpha >= pi
+		return 0.0
+	end
 	function integrand(x)
 		G = from_latlon(x[1],x[2],alpha)
 		value(S, G)*cos(G.theta_e)*cos(G.theta_i)*cos(x[1]) / 4
 	end
-	(val,err) = hcubature(integrand, (-pi/2, -pi/2), (pi/2, pi/2))
+	(val,err) = hcubature(integrand, (-pi/2, alpha-pi/2), (pi/2, pi/2),
+						  reltol=1e-3)
 	return val
 end
 

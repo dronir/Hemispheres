@@ -28,7 +28,7 @@ end
 Hemisphere(filename::String) = load_hemisphere(filename)
 
 
-
+import PhaseFunctions.value
 
 
 # ---- Product and division of Hemispheres ----
@@ -60,6 +60,9 @@ end
 # ---- Retrieving the value of a Hemisphere in a given geometry ----
 
 function value(H::Hemisphere, G::Geometry)
+	if !bool(G)
+		return 0.0
+	end
 	idx_in, idx_out = cell_index(H,G)
 	return H.data[idx_in, idx_out]
 end

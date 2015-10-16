@@ -15,7 +15,7 @@ using Cubature
 import PhaseFunctions.value
 
 export value, Lambert, LommelSeeliger, ParticulateMedium, AntiShadow, AntiR
-export spherealbedo, geometricalbedo
+export spherealbedo, geometricalbedo, integrated
 
 
 # ---- Lambert ----
@@ -30,6 +30,7 @@ value(S::Lambert, G::Geometry) = bool(G) ? 1.0 : 0.0
 planaralbedo(S::Lambert, theta::Real) = 1.0
 geometricalbedo(S::Lambert) = 2/3
 spherealbedo(S::Lambert) = 2/3
+integrated(S::Lambert, alpha::Real) = (sin(alpha) + (pi-alpha)*cos(alpha))/6
 
 
 # ---- Lommel-Seeliger ----
@@ -52,6 +53,9 @@ end
 
 geometricalbedo(S::LommelSeeliger) = S.omega / 8 * value(S.P, 0.0)
 spherealbedo(S::LommelSeeliger) = 2/3 * (1 - log(2))
+integrated(S::LommelSeeliger, alpha::Real) = pi/32 * value(S.P, alpha) * (
+		alpha < eps() ? 1.0 : 1 - sin(alpha/2) * tan(alpha/2) * log(cot(alpha/4)))
+
 
 
 # ---- Particulate Medium ----
@@ -116,7 +120,7 @@ function geometricalbedo(S::ScatteringLaw)
 end
 
 
-# ---- Sphere integrated brightness ----
+# ---- Sphere integrated brightness, generic ----
 
 function integrated(S::ScatteringLaw, alpha::Real)
 	function integrand(x)

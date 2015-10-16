@@ -1,7 +1,9 @@
 module ScatteringGeometry
 
 export Geometry, phase_angle, beta_angle, gamma_angle, photometric_coordinates
-export random_geometry
+export random_geometry, from_latlon
+
+import Base.bool
 
 # Illumination geometry type
 immutable Geometry
@@ -19,6 +21,8 @@ function Geometry(i::Vector, e::Vector, n::Vector)
 	phi = acos((cosa - mu0*mu) / (sin(theta_i) * sin(theta_e)))
 	return Geometry(theta_i, theta_e, phi)
 end
+
+bool(G::Geometry) = cos(G.theta_i) > 0.0 && cos(G.theta_e) > 0.0
 
 
 function phase_angle(G::Geometry)
@@ -55,13 +59,24 @@ end
 
 random_geometry() = random_geometry(0.0)
 function random_geometry(alpha::Real)
-	lat = acos(rand())
+	lat = asin(2*(rand()-0.5))
 	lon = (alpha - pi/2) + rand() * (pi - alpha)
 	mu = cos(lon)*cos(lat)
 	mu0 = cos(lon-alpha)*cos(lat)
 	theta_e = acos(mu)
 	theta_i = acos(mu0)
 	cosphi = abs(alpha)<eps() ? 1.0 : (cos(alpha) - mu0*mu) / (sin(theta_i) * sin(theta_e))
+	phi = acos(cosphi)
+	Geometry(theta_i, theta_e, phi)
+end
+
+function from_latlon(lat::Real, lon::Real, alpha::Real)
+	mu0 = cos(lon)*cos(lat)
+	mu = cos(lon-alpha)*cos(lat)
+	theta_e = acos(mu)
+	theta_i = acos(mu0)
+	cosphi = (cos(alpha) - mu0*mu) / (sin(theta_i) * sin(theta_e))
+	cosphi = clamp(cosphi, -1.0, 1.0)
 	phi = acos(cosphi)
 	Geometry(theta_i, theta_e, phi)
 end

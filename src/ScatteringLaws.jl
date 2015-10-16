@@ -10,6 +10,8 @@ using ScatteringGeometry
 using PhaseFunctions
 using Hemispheres
 
+using Cubature
+
 import PhaseFunctions.value
 
 export value, Lambert, LommelSeeliger, ParticulateMedium, AntiShadow, AntiR
@@ -22,7 +24,8 @@ immutable Lambert <: AnalyticalScatteringLaw
 end
 
 value(::Type{Lambert}, G::Geometry) = value(Lambert(), G)
-value(S::Lambert, G::Geometry) = 1.0
+value(S::Lambert, G::Geometry) = bool(G) ? 1.0 : 0.0
+
 
 planaralbedo(S::Lambert, theta::Real) = 1.0
 geometricalbedo(S::Lambert) = 2/3
@@ -39,9 +42,7 @@ LommelSeeliger() = LommelSeeliger(Isotropic(), 1.0)
 
 value(::Type{LommelSeeliger}, G::Geometry) = value(LommelSeeliger(), G)
 function value(S::LommelSeeliger, G::Geometry)
-	mu0 = cos(G.theta_i)
-	mu = cos(G.theta_e)
-	return S.omega * value(S.P, G) / (mu+mu0) / (4pi)
+	return bool(G) ? S.omega * value(S.P, G) / (cos(G.theta_e)+cos(G.theta_i)) / (4pi) : 0.0
 end
 
 function planaralbedo(S::LommelSeeliger, theta::Real) 
@@ -59,7 +60,7 @@ immutable ParticulateMedium <: ScatteringLaw
 	hemi::Hemisphere
 	P::PhaseFunction
 end
-value(S::ParticulateMedium, G::Geometry) = value(S.hemi,G) * value(S.P, G)
+value(S::ParticulateMedium, G::Geometry) = G ? value(S.hemi,G) * value(S.P, G) : 0.0
 
 
 # ---- Anti-Shadow ----
@@ -90,11 +91,8 @@ P_LS(alpha) = 0.75*(1 - sin(alpha/2) .* tan(alpha / 2) .* log(cot(alpha / 4))) /
 # gives a reflection coefficient, sans phase function.
 
 immutable AntiR <: AnalyticalScatteringLaw end
-function value(S::AntiR, G::Geometry)
-	mu0 = cos(G.theta_i)
-	alpha = phase_angle(G)
-	return 0.1 * P_LS(alpha) * 4 * mu0
-end
+value(S::AntiR, G::Geometry) = G ? 0.1 * P_LS(phase_angle(G)) * 4 * cos(G.theta_i) : 0.0
+
 
 
 
@@ -120,15 +118,13 @@ end
 
 # ---- Sphere integrated brightness ----
 
-const Niter = 100000
-
 function integrated(S::ScatteringLaw, alpha::Real)
-	s = 0.0
-	for i = 1:Niter
-		G = random_geometry(alpha)
-		s += value(S,G) * cos(G.theta_i) * cos(G.theta_e)
+	function integrand(x)
+		G = from_latlon(x[1],x[2],alpha)
+		value(S, G)*cos(G.theta_e)*cos(G.theta_i)*cos(x[1]) / 4
 	end
-	pi*s/Niter
+	(val,err) = hcubature(integrand, (-pi/2, -pi/2), (pi/2, pi/2))
+	return val
 end
 
 	

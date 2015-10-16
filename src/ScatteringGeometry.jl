@@ -75,6 +75,9 @@ function from_latlon(lat::Real, lon::Real, alpha::Real)
 	mu = cos(lon-alpha)*cos(lat)
 	theta_e = acos(mu)
 	theta_i = acos(mu0)
+	if theta_e==0 && theta_i==0
+		return Geometry(0.0, 0.0, 0.0)
+	end
 	cosphi = (cos(alpha) - mu0*mu) / (sin(theta_i) * sin(theta_e))
 	cosphi = clamp(cosphi, -1.0, 1.0)
 	phi = acos(cosphi)

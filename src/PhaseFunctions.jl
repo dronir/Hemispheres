@@ -69,20 +69,23 @@ value(S::HG1G2, alpha::Real) = P_HG(alpha, S.H, S.G1, S.G2)
 
 
 
-# ---- HG12 divided by another phase function ----
+# ---- HG divided by another phase function ----
 
-immutable HG12reduced
-	G12::Float64
+immutable HGreduced
+	G1::Float64
+	G2::Float64
 	P::PhaseFunction
 end
 
-value(S::HG12reduced, alpha::Real) = P_HG(alpha, 0.0, getG12(S.G12)...) / value(S.P, alpha)
+HGreduced(G12::Real, P::PhaseFunction) = HGreduced(getG12(G12)..., P)
+
+value(S::HGreduced, alpha::Real) = P_HG(alpha, 0.0, S.G1, S.G2) / value(S.P, alpha)
 
 
 
 # --- H, G1, G2 function, not a PhaseFunction but used in them ----
 
-getG12(G::Real) = (-0.84293649*G, 0.53513350-0.53513350*G)
+getG12(G::Real) = (0.84293649*G, 0.53513350-0.53513350*G)
 
 function P_HG(alpha::Real, H::Real, G1::Real, G2::Real)
 	if alpha >= 2.6179938779914944

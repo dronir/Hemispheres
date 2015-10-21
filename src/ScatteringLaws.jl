@@ -16,6 +16,9 @@ import PhaseFunctions.value
 
 export value, Lambert, LommelSeeliger, ParticulateMedium, AntiShadow, AntiR
 export spherealbedo, geometricalbedo, integrated
+export Hemisphere
+export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
+export Geometry
 
 
 # ---- Lambert ----
@@ -63,7 +66,7 @@ immutable ParticulateMedium <: ScatteringLaw
 	hemi::Hemisphere
 	P::PhaseFunction
 end
-value(S::ParticulateMedium, G::Geometry) = G ? value(S.hemi,G) * value(S.P, G) : 0.0
+value(S::ParticulateMedium, G::Geometry) = bool(G) ? value(S.hemi,G) * value(S.P, G) : 0.0
 
 
 # ---- Anti-Shadow ----
@@ -76,6 +79,9 @@ immutable AntiShadow <: AnalyticalScatteringLaw
 end
 AntiShadow() = AntiShadow(0.1)
 function value(S::AntiShadow, G::Geometry)
+	if !bool(G)
+		return 0.0 
+	end
 	alpha = phase_angle(G)
     mu0 = cos(G.theta_i)
     mu = cos(G.theta_e)
@@ -94,7 +100,7 @@ P_LS(alpha) = 0.75*(1 - sin(alpha/2) .* tan(alpha / 2) .* log(cot(alpha / 4))) /
 # gives a reflection coefficient, sans phase function.
 
 immutable AntiR <: AnalyticalScatteringLaw end
-value(S::AntiR, G::Geometry) = G ? 0.1 * P_LS(phase_angle(G)) * 4 * cos(G.theta_i) : 0.0
+value(S::AntiR, G::Geometry) = bool(G) ? 0.1 * P_LS(phase_angle(G)) * 4 * cos(G.theta_i) : 0.0
 
 
 

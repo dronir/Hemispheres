@@ -44,7 +44,7 @@ end
 
 NumericalPhaseFunction(filename::String) = NumericalPhaseFunction(readcsv(filename))
 
-value(S::NumericalPhaseFunction, alpha::Geometry) = interpolate_phasecurve(S.data, alpha)
+value(S::NumericalPhaseFunction, alpha::Real) = interpolate_phasecurve(S.data, alpha)
 
 function interpolate_phasecurve(Curve::Array, alpha::Real)
     for i = 1:size(Curve)[1]-1

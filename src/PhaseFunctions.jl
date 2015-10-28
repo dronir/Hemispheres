@@ -60,7 +60,7 @@ end
 
 # ---- H, G1, G2 phase function
 
-immutable HG1G2
+immutable HG1G2 <: PhaseFunction
 	H::Float64
 	G1::Float64
 	G2::Float64
@@ -71,7 +71,7 @@ value(S::HG1G2, alpha::Real) = P_HG(alpha, S.H, S.G1, S.G2)
 
 # ---- HG divided by another phase function ----
 
-immutable HGreduced
+immutable HGreduced <: PhaseFunction
 	p::Float64
 	G1::Float64
 	G2::Float64

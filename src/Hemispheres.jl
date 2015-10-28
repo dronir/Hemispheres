@@ -195,14 +195,14 @@ function save_hemisphere(H::Hemisphere, filename::String)
 	nData = NcDim("data", H.nData)
 	thetaI = NcDim("thetaI", H.nTheta)
 	data = NcVar("Hemisphere", [thetaI, nData, level], t=Float64)
-	globals = {
+	globals = Dict{Any,Any}(
 		"nThetaI"=>H.nTheta,
 		"dTheta"=>H.dTheta,
 		"nPhi"=>H.nPhi,
 		"dPhi"=>H.dPhi,
 		"cIdx"=>H.cIdx,
 		"dA"=>H.dA
-	}
+	)
 	D = ones(Float64, H.nTheta, sum(H.nPhi), 1)
 	D[:,:,1] = H.data
 	nc = NetCDF.create(filename, [data], mode=NC_CLASSIC_MODEL)

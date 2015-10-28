@@ -4,7 +4,7 @@ using Abstracts
 using ScatteringGeometry
 using Splines
 
-export LSintegral, LambertSphere, NumericalPhaseFunction, Isotropic
+export LSintegral, LambertSphere, Numerical, Isotropic
 
 # ---- Generic value function from Geometry ----
 value(S::PhaseFunction, G::Geometry) = value(S, phase_angle(G))
@@ -38,13 +38,13 @@ value(S::LambertSphere, alpha::Real) = (sin(alpha) + (pi - alpha) * cos(alpha)) 
 
 # ---- Numerically interpolated phase function ----
 
-immutable NumericalPhaseFunction <: PhaseFunction
+immutable Numerical <: PhaseFunction
 	data::Array
 end
 
-NumericalPhaseFunction(filename::String) = NumericalPhaseFunction(readcsv(filename))
+Numerical(filename::String) = Numerical(readcsv(filename))
 
-value(S::NumericalPhaseFunction, alpha::Real) = interpolate_phasecurve(S.data, alpha)
+value(S::Numerical, alpha::Real) = interpolate_phasecurve(S.data, alpha)
 
 function interpolate_phasecurve(Curve::Array, alpha::Real)
     for i = 1:size(Curve)[1]-1

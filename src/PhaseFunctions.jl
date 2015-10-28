@@ -72,14 +72,18 @@ value(S::HG1G2, alpha::Real) = P_HG(alpha, S.H, S.G1, S.G2)
 # ---- HG divided by another phase function ----
 
 immutable HGreduced
+	p::Float64
 	G1::Float64
 	G2::Float64
 	P::PhaseFunction
 end
 
-HGreduced(G12::Real, P::PhaseFunction) = HGreduced(getG12(G12)..., P)
+function HGreduced(p::Real, G12::Real, P::PhaseFunction)
+	P.data[:,2] /= P.data[1,2]
+	HGreduced(p, getG12(G12)..., P)
+end
 
-value(S::HGreduced, alpha::Real) = P_HG(alpha, 0.0, S.G1, S.G2) / value(S.P, alpha)
+value(S::HGreduced, alpha::Real) = S.p * P_HG(alpha, 0.0, S.G1, S.G2) / value(S.P, alpha)
 
 
 

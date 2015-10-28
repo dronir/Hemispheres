@@ -2,9 +2,6 @@
 
 module ScatteringLaws
 
-#include("Abstracts.jl")
-#include("Abstracts.jl")
-#include("Abstracts.jl")
 using Abstracts
 using ScatteringGeometry
 using PhaseFunctions
@@ -14,6 +11,7 @@ using Cubature
 
 import PhaseFunctions.value
 
+export ScatteringLaw, PhaseFunctions
 export value, Lambert, LommelSeeliger, ParticulateMedium, AntiShadow, AntiR
 export spherealbedo, geometricalbedo, integrated
 export Hemisphere

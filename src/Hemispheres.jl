@@ -211,6 +211,20 @@ function save_hemisphere(H::Hemisphere, filename::String)
 	NetCDF.close(nc)
 end
 
+function get_primary_plane(H::Hemisphere, thetaI::Real, N::Integer)
+	X = linspace(-85.0, 85.0, N)
+	Y = zeros(N)
+	for i = 1:N
+		x = X[i]
+		theta_e = abs(x)*pi/180
+		t = int(fld(theta_e, H.dTheta))+1
+		phi = x<=0 ? 10*eps() : pi-0.5*H.dPhi[t]
+		G = Geometry(thetaI, theta_e, phi)
+		Y[i] = value(H,G)
+	end
+	return X,Y
+end
+
 
 
 end # module

@@ -79,7 +79,7 @@ immutable HGreduced <: PhaseFunction
 end
 
 function HGreduced(p::Real, G12::Real, P::PhaseFunction)
-	P.data[:,2] /= P.data[1,2]
+	P.data[:,2] *= 4.0
 	HGreduced(p, getG12(G12)..., P)
 end
 

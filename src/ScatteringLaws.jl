@@ -13,7 +13,7 @@ import PhaseFunctions.value
 
 export ScatteringLaw, PhaseFunctions
 export value, Lambert, LommelSeeliger, ParticulateMedium, AntiShadow, AntiR
-export spherealbedo, geometricalbedo, integrated
+export sphere_albedo, geometric_albedo, integrated
 export Hemisphere
 export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
 export Geometry
@@ -29,9 +29,9 @@ value(S::Lambert, G::Geometry) = bool(G) ? 1.0 : 0.0
 
 
 planaralbedo(S::Lambert, theta::Real) = 1.0
-geometricalbedo(S::Lambert) = 2/3
-spherealbedo(S::Lambert) = 2/3
-integrated(S::Lambert, alpha::Real) = (sin(alpha) + (pi-alpha)*cos(alpha))/6
+geometric_albedo(S::Lambert) = 2.0/3.0
+sphere_albedo(S::Lambert) = 1.0
+integrated(S::Lambert, alpha::Real) = (sin(alpha) + (pi-alpha)*cos(alpha)) / (6pi)
 
 
 # ---- Lommel-Seeliger ----
@@ -44,7 +44,7 @@ LommelSeeliger() = LommelSeeliger(Isotropic(), 1.0)
 
 value(::Type{LommelSeeliger}, G::Geometry) = value(LommelSeeliger(), G)
 function value(S::LommelSeeliger, G::Geometry)
-	return bool(G) ? S.omega * value(S.P, G) / (cos(G.theta_e)+cos(G.theta_i)) / (4pi) : 0.0
+	return bool(G) ? S.omega * value(S.P, G) / (cos(G.theta_e)+cos(G.theta_i)) / 4 : 0.0
 end
 
 function planaralbedo(S::LommelSeeliger, theta::Real) 
@@ -52,8 +52,8 @@ function planaralbedo(S::LommelSeeliger, theta::Real)
 	mu<eps(theta) ? 0.5*S.omega : S.omega*(mu*log(mu) - mu*log(mu+1) + 1) / 2
 end
 
-geometricalbedo(S::LommelSeeliger) = S.omega / 8 * value(S.P, 0.0)
-spherealbedo(S::LommelSeeliger) = 2/3 * (1 - log(2))
+geometric_albedo(S::LommelSeeliger) = S.omega / 8 * value(S.P, 0.0)
+sphere_albedo(S::LommelSeeliger) = 2/3 * (1 - log(2))
 integrated(S::LommelSeeliger, alpha::Real) = value(S.P, alpha)/32 * (alpha < eps() ? 1.0 : 1 - sin(alpha/2) * tan(alpha/2) * log(cot(alpha/4)))
 
 
@@ -97,15 +97,25 @@ P_LS(alpha) = 0.75*(1 - sin(alpha/2) .* tan(alpha / 2) .* log(cot(alpha / 4))) /
 # Dividing this out of a hemiScatter output hemisphere
 # gives a reflection coefficient, sans phase function.
 
-immutable AntiR <: AnalyticalScatteringLaw end
-value(S::AntiR, G::Geometry) = bool(G) ? 0.1 * P_LS(phase_angle(G)) * 4 * cos(G.theta_i) : 0.0
+immutable AntiR <: AnalyticalScatteringLaw 
+	C::Float64
+end
+AntiR() = AntiR(1/(2pi))
+function value(S::AntiR, G::Geometry) 
+	if !bool(G) 
+		return 0.0 
+	end
+	alpha = phase_angle(G)
+	phiLS = (1 - sin(alpha/2) .* tan(alpha / 2) .* log(cot(alpha / 4)))
+	return phiLS * S.C * cos(G.theta_i)
+end
 
 
 
 
 # ---- Albedo computations ----
 
-function spherealbedo(S::ScatteringLaw)
+function sphere_albedo(S::ScatteringLaw)
 	s = 0.0
 	for mu in linspace(0.0, 0.985, 10000)
 		s += mu*Hemispheres.planaralbedo(S, acos(mu))
@@ -113,14 +123,7 @@ function spherealbedo(S::ScatteringLaw)
 	return 2s/10000
 end
 
-function geometricalbedo(S::ScatteringLaw)
-	theta = linspace(0.0, 0.95*pi/2, 100)
-	s = 0.0
-	for th in theta
-		s += cos(th) * value(S, Geometry(th,th,0.0))
-	end
-	return s / 100
-end
+geometric_albedo(S::ScatteringLaw) = 4 * integrated(S, 0.0)
 
 
 # ---- Sphere integrated brightness, generic ----
@@ -131,11 +134,11 @@ function integrated(S::ScatteringLaw, alpha::Real)
 	end
 	function integrand(x)
 		G = from_latlon(x[1],x[2],alpha)
-		value(S, G)*cos(G.theta_e)*cos(G.theta_i)*cos(x[1]) / 4
+		value(S, G)*cos(G.theta_e)*cos(G.theta_i)*cos(x[1])
 	end
 	(val,err) = hcubature(integrand, (-pi/2, alpha-pi/2), (pi/2, pi/2),
 						  reltol=1e-3)
-	return val
+	return val / (4pi)
 end
 
 	

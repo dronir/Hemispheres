@@ -65,6 +65,7 @@ immutable ParticulateMedium <: ScatteringLaw
 	P::PhaseFunction
 end
 value(S::ParticulateMedium, G::Geometry) = bool(G) ? value(S.hemi,G) * value(S.P, G) : 0.0
+integrated(S::ParticulateMedium, a::Real) = integrated(S.hemi, a) * value(S.P, a)
 
 
 # ---- Anti-Shadow ----

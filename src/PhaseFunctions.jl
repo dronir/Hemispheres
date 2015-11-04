@@ -89,7 +89,13 @@ value(S::HGreduced, alpha::Real) = S.p * P_HG(alpha, 0.0, S.G1, S.G2) / value(S.
 
 # --- H, G1, G2 function, not a PhaseFunction but used in them ----
 
-getG12(G::Real) = (0.84293649*G, 0.53513350-0.53513350*G)
+function getG12(G12::Real)
+	if G12 < 0.2
+		return (0.7527*G12 + 0.06164, -0.9612*G12 + 0.6270)
+	else
+		return (0.9529*G12 + 0.02162, -0.6125*G12 + 0.5572)
+	end
+end
 
 function P_HG(alpha::Real, H::Real, G1::Real, G2::Real)
 	if alpha >= 2.6179938779914944

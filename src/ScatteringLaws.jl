@@ -133,7 +133,7 @@ function integrated(S::ScatteringLaw, alpha::Real)
 	if alpha >= pi
 		return 0.0
 	end
-	function integrand(x)
+	function integrand{T<:Real}(x::Array{T})
 		G = from_latlon(x[1],x[2],alpha)
 		value(S, G)*cos(G.theta_e)*cos(G.theta_i)*cos(x[1])
 	end

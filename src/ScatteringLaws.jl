@@ -77,7 +77,7 @@ function g(mu::Real, rho::Real)
 		N = cdf(N1, -xi)
 		return n/xi - N
 	else
-		return 1.0
+		return 0.0
 	end
 end
 

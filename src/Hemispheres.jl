@@ -7,21 +7,21 @@ using NetCDF
 using Distributions
 
 export Hemisphere
-export value, cell_index, point_in_cell
-export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
-export plot_primary_plane
+export value, cell_index
+export generate_hemisphere, save_hemisphere, load_hemisphere
+
 
 # Hemisphere type
 type Hemisphere <: ScatteringLaw
 	nData::Int64
 	nTheta::Int64
 	dTheta::Float64
-	nPhi::Array{Int64}
-	dPhi::Array{Float64}
-	cIdx::Array{Int64}
-	dA::Array{Float64}
-	data::Array{Float64}
-	planar::Array{Float64}
+	nPhi::Array{Int64,1}
+	dPhi::Array{Float64,1}
+	cIdx::Array{Int64,1}
+	dA::Array{Float64,1}
+	data::Array{Float64,2}
+	planar::Array{Float64,1}
 end
 
 # Construct Hemisphere directly from file.

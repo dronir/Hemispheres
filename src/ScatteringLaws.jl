@@ -7,6 +7,7 @@ using ScatteringGeometry
 using PhaseFunctions
 using Hemispheres
 
+using Distributions
 using Cubature
 
 import PhaseFunctions.value
@@ -56,6 +57,44 @@ geometric_albedo(S::LommelSeeliger) = S.omega / 8 * value(S.P, 0.0)
 sphere_albedo(S::LommelSeeliger) = 2/3 * (1 - log(2))
 integrated(S::LommelSeeliger, alpha::Real) = value(S.P, alpha)/32 * (alpha < eps() ? 1.0 : 1 - sin(alpha/2) * tan(alpha/2) * log(cot(alpha/4)))
 
+
+
+# ---- Peltoniemi surface ----
+
+const N1 = Normal(0,1)
+
+immutable Peltoniemi <: ScatteringLaw
+	omega::Float64
+	P::PhaseFunction
+	rho::Float64
+end
+
+function g(mu::Real, rho::Real)
+	invxi = (rho * sqrt(1 - mu^2)) / mu
+	if invxi > 0.0
+		xi = 1.0/invxi
+		n = pdf(N1, xi)
+		N = cdf(N1, -xi)
+		return n/xi - N
+	else
+		return 1.0
+	end
+end
+
+V(mu, rho) = one(mu) / (one(mu) + g(mu, rho))
+
+function value(S::Peltoniemi, G::Geometry)
+	if !bool(G)
+		return 0.0 
+	end
+	mu0 = cos(G.theta_i)
+	mu = cos(G.theta_e)
+	s = sqrt(sin(G.phi/2))
+	v = V(mu, S.rho)
+	v0 = V(mu0, S.rho)
+	W = (1-s) * min(v,v0) + s*v*v0
+	return W / (mu + mu0) * value(S.P, G) * S.omega / 4
+end
 
 
 # ---- Particulate Medium ----

@@ -20,11 +20,11 @@ value(S::Isotropic, alpha::Real) = 1.0
 # ---- Lommel-Seeliger sphere integrated brightness ----
 
 immutable LSintegral <: PhaseFunction
-	omega::Float64
-	P::PhaseFunction
 end
 
-value(S::LSintegral, alpha::Real) = (1 - sin(alpha/2) * tan(alpha/2) * log(cot(alpha/4))) / 32
+LSi(alpha::Real) = alpha<eps() ? 1.0 : 1 - sin(alpha/2) * tan(alpha/2) * log(cot(alpha/4)) 
+
+value(S::LSintegral, alpha::Real) = LSi(alpha) / 32
 value(::Type{LSintegral}, alpha::Real) = value(LSintegral(), alpha)
 
 
@@ -79,11 +79,10 @@ immutable HGreduced <: PhaseFunction
 end
 
 function HGreduced(p::Real, G12::Real, P::PhaseFunction)
-	P.data[:,2] *= 4.0
 	HGreduced(p, getG12(G12)..., P)
 end
 
-value(S::HGreduced, alpha::Real) = S.p * P_HG(alpha, 0.0, S.G1, S.G2) / value(S.P, alpha)
+value(S::HGreduced, alpha::Real) = S.p * P_HG(alpha, 0.0, S.G1, S.G2) / (4*value(S.P, alpha))
 
 
 

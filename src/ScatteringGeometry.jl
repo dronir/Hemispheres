@@ -18,7 +18,12 @@ function Geometry(i::Vector, e::Vector, n::Vector)
 	cosa = dot(i, e)
 	theta_i = acos(mu0)
 	theta_e = acos(mu)
-	phi = acos((cosa - mu0*mu) / (sin(theta_i) * sin(theta_e)))
+	if theta_e==0 && theta_i==0
+		return Geometry(0.0, 0.0, 0.0)
+	end
+	cosphi = (cosa - mu0*mu) / (sin(theta_i) * sin(theta_e))
+	cosphi = clamp(cosphi, -1.0, 1.0)
+	phi = acos(cosphi)
 	return Geometry(theta_i, theta_e, phi)
 end
 

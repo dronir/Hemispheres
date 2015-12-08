@@ -12,10 +12,11 @@ using Cubature
 
 import PhaseFunctions.value
 
-export ScatteringLaw, PhaseFunctions
+export ScatteringLaw, PhaseFunctions, AnalyticalScatteringLaw
 export value, Lambert, LommelSeeliger, ParticulateMedium, AntiShadow, AntiR
 export sphere_albedo, geometric_albedo, integrated
 export Hemisphere
+export Peltoniemi
 export generate_hemisphere, save_hemisphere, load_hemisphere, plot_hemisphere
 export Geometry
 
@@ -63,11 +64,13 @@ integrated(S::LommelSeeliger, alpha::Real) = value(S.P, alpha)/32 * (alpha < eps
 
 const N1 = Normal(0,1)
 
-immutable Peltoniemi <: ScatteringLaw
-	omega::Float64
+immutable Peltoniemi <: AnalyticalScatteringLaw
 	P::PhaseFunction
+	omega::Float64
 	rho::Float64
 end
+
+Peltoniemi() = Peltoniemi(Isotropic(), 1.0, 0.5)
 
 function g(mu::Real, rho::Real)
 	invxi = (rho * sqrt(1 - mu^2)) / mu

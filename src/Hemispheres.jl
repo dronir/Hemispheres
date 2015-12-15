@@ -45,6 +45,14 @@ function *(A::Hemisphere, B::Hemisphere)
 	end
 end
 
+function *(A::Hemisphere, x::Real)
+	H = Hemisphere(A.nData, A.nTheta, A.dTheta, A.nPhi, A.dPhi, A.cIdx, A.dA, A.data.*x, A.planar)
+	compute_planar!(H)
+	return H
+end
+
+*(x::Real, H::Hemisphere) = H*x
+
 function /(A::Hemisphere, B::Hemisphere)
 	if A.nTheta==B.nTheta
 		H = Hemisphere(A.nData, A.nTheta, A.dTheta, A.nPhi, A.dPhi, A.cIdx, A.dA, A.data./B.data, A.planar)

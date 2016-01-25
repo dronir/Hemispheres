@@ -134,4 +134,29 @@ end
 
 plot_primary_plane(H::Hemisphere, thetaI::Real) = plot_primary_plane(H,thetaI,1000)
 
+
+function plot_phase(H::ScatteringLaw, N::Integer)
+    Geometries = Geometry[]
+    Thetas = linspace(0.0, 80.0, N) * pi/180
+    
+    for i = 1:N
+        theta_i = Thetas[i]
+        for j = 1:N
+            theta_e = Thetas[j]
+            kmax = fld(N^2-N,2)
+            Phis = linspace(0.0, 180.0, kmax) * pi/180
+            for k = 1:kmax
+                phi = Phis[k]
+                push!(Geometries, Geometry(theta_i, theta_e, phi))
+            end
+        end
+    end
+    Alphas = [ScatteringLaws.phase_angle(g) for g in Geometries]
+    Values = [value(H,g) for g in Geometries]
+    plot.scatter(Alphas, Values)
+    plot.show()
+    
+end
+
+
 end # module

@@ -190,7 +190,7 @@ function load_hemisphere(filename::String)
 	end
 	nTheta = size(data)[1]
 	nData = sum(nPhi)
-	ncclose()
+	ncclose(filename)
 	planar = zeros(nTheta)
 	H = Hemisphere(nData,nTheta,dTheta,nPhi,dPhi,cIdx,dA,data,planar)
 	compute_planar!(H)

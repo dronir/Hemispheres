@@ -57,8 +57,20 @@ function interpolate_phasecurve(Curve::Array, alpha::Real)
 end
 
 
+# --- Double Henyey-Greenstein phase function ----
 
-# ---- H, G1, G2 phase function
+immutable HG2 <: PhaseFunction
+    w::Float64
+    g1::Float64
+    g2::Float64
+end
+
+value(S::HG2, alpha::Real) = S.w * HG(alpha, S.g1) + (1-S.w) * HG(alpha, S.g2)
+
+HG(alpha, g) = (1-g^2) / (1 + g^2 + 2*g*cos(alpha))^1.5
+
+
+# ---- H, G1, G2 phase function ----
 
 immutable HG1G2 <: PhaseFunction
 	H::Float64
